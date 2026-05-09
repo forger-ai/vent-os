@@ -1,0 +1,115 @@
+{
+  "name": "vent-os",
+  "version": "0.1.0",
+  "description": "Local-first POS, sales, and inventory app for Chilean SMBs (Pymes). FastAPI backend, Vite + React frontend, SQLite storage.",
+  "changelog": [
+    {
+      "version": "0.1.0",
+      "summary": "Initial scaffolding with products, customers, POS, sales documents, inventory, and cash sessions.",
+      "changes": [
+        "Defines domain models for products, customers, sales documents (boleta/factura/nota de venta), document items, stock movements, and cash sessions.",
+        "Exposes empty REST endpoints under /api/products, /api/customers, /api/documents, /api/pos, /api/stock, /api/cash.",
+        "Provides a six-tab frontend shell wired to the backend health and domain endpoints.",
+        "Documents non-goals: SII electronic emission (signing, CAF folios, DTE submission), banking reconciliation, multi-branch, and multi-user are out of scope for v0.1."
+      ]
+    }
+  ],
+  "author": "Forger AI",
+  "license": "MIT",
+  "stack": {
+    "backend": {
+      "language": "python",
+      "framework": "fastapi",
+      "package_manager": "uv",
+      "database": "sqlite",
+      "python_version": "3.12"
+    },
+    "frontend": {
+      "language": "typescript",
+      "framework": "react",
+      "bundler": "vite",
+      "ui": "mui",
+      "node_version": "24"
+    }
+  },
+  "catalog": {
+    "display_name": "Vent OS",
+    "short_description": "Punto de venta, boletas/facturas e inventario para Pymes chilenas. Tus datos en tu equipo.",
+    "description": "Vent OS es una app local para Pymes chilenas que cubre lo esencial de la operacion comercial: catalogo de productos con stock, ficha de clientes, punto de venta para vender en mostrador, registro local de boletas y facturas (con folio interno), control de inventario con movimientos de entrada/salida/ajuste, y caja diaria con apertura y cierre. En esta version no emite documentos electronicos al SII; trabaja como registro local. Toda la informacion vive en tu equipo.",
+    "category": "business",
+    "capabilities": [
+      {
+        "id": "product_catalog",
+        "title": "Administrar catalogo de productos",
+        "description": "Mantiene productos con SKU, nombre, precio, unidad, afecto a IVA y stock actual."
+      },
+      {
+        "id": "customer_registry",
+        "title": "Administrar clientes",
+        "description": "Mantiene ficha de clientes con RUT, razon social, giro, direccion y tipo de documento (boleta o factura)."
+      },
+      {
+        "id": "point_of_sale",
+        "title": "Vender en punto de venta",
+        "description": "Carrito rapido con busqueda de productos, calculo de totales con IVA y seleccion de cliente para emitir documento."
+      },
+      {
+        "id": "sales_documents",
+        "title": "Registrar boletas y facturas",
+        "description": "Registra boletas, facturas y notas de venta de forma local con folio interno. No emite al SII en esta version."
+      },
+      {
+        "id": "inventory_tracking",
+        "title": "Controlar inventario",
+        "description": "Registra movimientos de entrada, salida y ajuste de stock con motivo, vinculados o no a un documento de venta."
+      },
+      {
+        "id": "cash_register",
+        "title": "Abrir y cerrar caja",
+        "description": "Sesiones de caja con apertura, cierre y resumen de ventas del turno."
+      }
+    ],
+    "supported_platforms": [
+      "darwin_arm64",
+      "darwin_x64"
+    ],
+    "release": {
+      "repository": "forger-ai/vent-os",
+      "tag_template": "{name}/v{version}",
+      "asset_name_template": "{name}-{version}.zip",
+      "catalog_repository": "forger-ai/apps-catalog",
+      "catalog_manifest_path": "vite-fastapi-sqlite/vent-os/manifest.json"
+    },
+    "beta": true
+  },
+  "services": [
+    {
+      "name": "backend",
+      "type": "http",
+      "context": "./backend",
+      "port": 8000,
+      "command": "uv run fastapi dev src/app/main.py --host 0.0.0.0 --port 8000",
+      "healthcheck": "/api/health",
+      "environment": {
+        "DATABASE_URL": "sqlite:///{app_data}/vent_os.sqlite",
+        "CORS_ORIGINS": "http://localhost:5182,http://127.0.0.1:5182"
+      },
+      "volumes": [
+        { "source": "./backend", "target": "/app" },
+        { "source": "./backend/data", "target": "/app/data", "persist": true }
+      ]
+    },
+    {
+      "name": "frontend",
+      "type": "http",
+      "context": "./frontend",
+      "port": 5182,
+      "command": "npm run dev -- --host 0.0.0.0 --port 5182",
+      "environment": {
+        "VITE_API_BASE_URL": "http://localhost:8000"
+      },
+      "depends_on": ["backend"]
+    }
+  ],
+  "skills": []
+}

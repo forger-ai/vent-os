@@ -1,0 +1,88 @@
+import { useEffect, useState } from "react";
+import {
+  AppBar,
+  Box,
+  Chip,
+  CircularProgress,
+  Container,
+  Tab,
+  Tabs,
+  Toolbar,
+  Typography,
+} from "@mui/material";
+import { get } from "./api/client";
+import ProductosPage from "./pages/ProductosPage";
+import ClientesPage from "./pages/ClientesPage";
+import PosPage from "./pages/PosPage";
+import DocumentosPage from "./pages/DocumentosPage";
+import InventarioPage from "./pages/InventarioPage";
+import CajaPage from "./pages/CajaPage";
+
+type HealthStatus = "loading" | "ok" | "error";
+
+const TABS = [
+  { id: "pos", label: "POS" },
+  { id: "productos", label: "Productos" },
+  { id: "clientes", label: "Clientes" },
+  { id: "documentos", label: "Documentos" },
+  { id: "inventario", label: "Inventario" },
+  { id: "caja", label: "Caja" },
+] as const;
+
+type TabId = (typeof TABS)[number]["id"];
+
+export default function App() {
+  const [status, setStatus] = useState<HealthStatus>("loading");
+  const [tab, setTab] = useState<TabId>("pos");
+
+  useEffect(() => {
+    get<{ status: string }>("/api/health")
+      .then((data) => setStatus(data.status === "ok" ? "ok" : "error"))
+      .catch(() => setStatus("error"));
+  }, []);
+
+  return (
+    <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+      <AppBar position="static" color="default" elevation={1}>
+        <Toolbar sx={{ gap: 2 }}>
+          <Typography variant="h6" fontWeight={700} sx={{ flexGrow: 0 }}>
+            Vent OS
+          </Typography>
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ flexGrow: 1 }}
+          >
+            Punto de venta e inventario para tu Pyme
+          </Typography>
+          {status === "loading" && <CircularProgress size={18} />}
+          {status === "ok" && (
+            <Chip label="API conectada" color="success" size="small" variant="outlined" />
+          )}
+          {status === "error" && (
+            <Chip label="API no disponible" color="error" size="small" variant="outlined" />
+          )}
+        </Toolbar>
+        <Tabs
+          value={tab}
+          onChange={(_, value) => setTab(value as TabId)}
+          variant="scrollable"
+          scrollButtons="auto"
+        >
+          {TABS.map((t) => (
+            <Tab key={t.id} value={t.id} label={t.label} />
+          ))}
+        </Tabs>
+      </AppBar>
+
+      <Container maxWidth="lg" sx={{ flexGrow: 1, py: 3 }}>
+        {tab === "pos" && <PosPage />}
+        {tab === "productos" && <ProductosPage />}
+        {tab === "clientes" && <ClientesPage />}
+        {tab === "documentos" && <DocumentosPage />}
+        {tab === "inventario" && <InventarioPage />}
+        {tab === "caja" && <CajaPage />}
+      </Container>
+    </Box>
+  );
+}

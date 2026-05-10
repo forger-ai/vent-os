@@ -18,7 +18,7 @@ Key rule: internal tools can be used to execute tasks, but they must not be pres
 - id: `vent-os`
 - recommended visible name: `Vent OS`
 - type: local-first POS, sales, and inventory app for Chilean SMBs (Pymes)
-- status: scaffolding only — domain models and a six-tab UI shell, no business logic implemented yet
+- status: products module funcional (CRUD completo). El resto (clientes, POS, documentos, inventario, caja) sigue como scaffolding
 
 ## Functional Goal
 
@@ -46,13 +46,13 @@ All data lives on the user's machine. **This version does not emit electronic do
 
 ## Real Functional Scope
 
-### What It Does Today (v0.1.x)
+### What It Does Today (v0.2.x)
 
 - starts a frontend and backend locally
 - responds to `GET /api/health`
 - shows a six-tab shell: Productos, Clientes, POS, Documentos, Inventario, Caja
-- domain models for products, customers, documents, items, stock movements, cash sessions are declared
-- REST endpoints are scaffolded but **return empty results** — the calculation, validation, and folio assignment logic is not implemented yet
+- **Productos: funcional**. Crear, editar, buscar (SKU/nombre/codigo de barras), filtrar (categoria, marca, tipo, activos, stock bajo), desactivar. Producto soporta tipo `product` o `service` (servicios no manejan stock).
+- Clientes, POS, Documentos, Inventario y Caja: scaffolding (modelos declarados, endpoints devuelven listas vacias, UI muestra Alerts informativos)
 
 ### What It Does Not Do Today
 
@@ -70,15 +70,27 @@ The agent must not invent capabilities outside this scope. When the user asks ab
 
 These are the actions you can present as real to the final user — at the **scaffolding** level (the UI exists, business logic is pending).
 
-### 1. Product Catalog
+### 1. Product Catalog (funcional desde v0.2.0)
 
 The user can ask:
 
 - "que productos tengo cargados?"
 - "agrega el producto X con precio Y"
 - "cual es el stock de X?"
+- "cuales productos estan en stock bajo?"
+- "desactiva el producto X"
 
-Expected response in v0.1.x: confirm what the UI shows; if the underlying endpoint is empty, say so plainly and offer to load test data once the logic exists.
+What works today:
+
+- crear, editar y desactivar productos desde la UI
+- buscar por SKU, nombre o codigo de barras
+- filtrar por categoria, marca, tipo (producto/servicio), activos o stock bajo
+- el listado pagina del lado del servidor con orden configurable
+- indicador visual rojo cuando `stock_qty <= stock_min` (solo aplica a productos, no servicios)
+
+The agent debe distinguir entre **producto** (maneja stock) y **servicio** (no maneja stock). Para servicios los campos de stock se ignoran.
+
+Desactivar es soft delete: el producto se oculta del listado por defecto pero su id sigue siendo valido para documentos historicos.
 
 ### 2. Customer Registry
 

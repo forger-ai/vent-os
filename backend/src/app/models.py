@@ -71,16 +71,26 @@ class CashSessionStatus(str, Enum):
     closed = "closed"
 
 
+class ProductType(str, Enum):
+    product = "product"
+    service = "service"
+
+
 # ── Catalog ───────────────────────────────────────────────────────────────────
 
 
 class Product(SQLModel, table=True):
     id: str = Field(default_factory=new_id, primary_key=True)
     sku: str = Field(index=True, unique=True)
+    barcode: Optional[str] = Field(default=None, index=True)
     name: str
     description: Optional[str] = None
+    category: Optional[str] = Field(default=None, index=True)
+    brand: Optional[str] = Field(default=None, index=True)
+    product_type: ProductType = Field(default=ProductType.product)
     unit: ProductUnit = Field(default=ProductUnit.unit)
     price_clp: Decimal = Field(default=Decimal("0"))
+    cost_clp: Optional[Decimal] = None
     iva_affected: bool = Field(default=True)
     stock_qty: Decimal = Field(default=Decimal("0"))
     stock_min: Decimal = Field(default=Decimal("0"))

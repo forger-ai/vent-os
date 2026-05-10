@@ -39,5 +39,7 @@ app.include_router(cash_router, prefix="/api/cash", tags=["cash"])
 @app.on_event("startup")
 def on_startup() -> None:
     from app import models as _models  # noqa: F401
+    from app.database_ext import run_migrations
 
     init_db()
+    run_migrations()

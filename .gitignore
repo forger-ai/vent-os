@@ -18,6 +18,8 @@ node_modules/
 dist/
 .vite/
 *.local
+*.tsbuildinfo
+package-lock.json
 
 # Env files
 .env

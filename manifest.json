@@ -1,8 +1,19 @@
 {
   "name": "vent-os",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Local-first POS, sales, and inventory app for Chilean SMBs (Pymes). FastAPI backend, Vite + React frontend, SQLite storage.",
   "changelog": [
+    {
+      "version": "0.2.0",
+      "summary": "Catalogo de productos funcional: crear, editar, buscar, filtrar y desactivar.",
+      "changes": [
+        "Producto ahora incluye codigo de barras, categoria, marca, tipo (producto/servicio) y costo opcional.",
+        "Listado con busqueda por SKU/nombre/codigo de barras, filtros por categoria/marca/tipo, indicador visual de stock bajo, y opcion de mostrar inactivos.",
+        "Crear, editar, y desactivar producto desde la UI (soft delete preserva historico).",
+        "Endpoints REST completos en /api/products con paginacion y ordenamiento server-side.",
+        "Migracion idempotente: instalaciones de v0.1.0 ganan las columnas nuevas sin perder datos."
+      ]
+    },
     {
       "version": "0.1.0",
       "summary": "Initial scaffolding with products, customers, POS, sales documents, inventory, and cash sessions.",

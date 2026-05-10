@@ -13,9 +13,12 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import FactCheckIcon from "@mui/icons-material/FactCheck";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import TuneIcon from "@mui/icons-material/Tune";
 import { DataGrid, type GridColDef } from "@mui/x-data-grid";
+import { Button } from "@mui/material";
 import { ApiError } from "../../api/client";
 import {
   type StockLevelRow,
@@ -24,6 +27,8 @@ import {
 import { type WarehouseRow, listWarehouses } from "../../api/warehouses";
 import { formatQty } from "../../util/format";
 import StockAdjustDialog from "./StockAdjustDialog";
+import TransferDialog from "./TransferDialog";
+import CountDialog from "./CountDialog";
 
 export default function StockTab() {
   const [rows, setRows] = useState<StockLevelRow[]>([]);
@@ -34,6 +39,9 @@ export default function StockTab() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [adjustLevel, setAdjustLevel] = useState<StockLevelRow | null>(null);
+  const [transferLevel, setTransferLevel] = useState<StockLevelRow | null>(null);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [countOpen, setCountOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -128,15 +136,28 @@ export default function StockTab() {
       {
         field: "actions",
         headerName: "",
-        width: 120,
+        width: 130,
         sortable: false,
         filterable: false,
         renderCell: (p) => (
-          <Tooltip title="Ajustar stock">
-            <IconButton size="small" onClick={() => setAdjustLevel(p.row)}>
-              <TuneIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
+          <Stack direction="row" spacing={0.5}>
+            <Tooltip title="Ajustar stock">
+              <IconButton size="small" onClick={() => setAdjustLevel(p.row)}>
+                <TuneIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Transferir a otra bodega">
+              <IconButton
+                size="small"
+                onClick={() => {
+                  setTransferLevel(p.row);
+                  setTransferOpen(true);
+                }}
+              >
+                <SwapHorizIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Stack>
         ),
       },
     ],
@@ -178,6 +199,26 @@ export default function StockTab() {
         </Tooltip>
       </Stack>
 
+      <Stack direction="row" spacing={1}>
+        <Button
+          variant="outlined"
+          startIcon={<SwapHorizIcon />}
+          onClick={() => {
+            setTransferLevel(null);
+            setTransferOpen(true);
+          }}
+        >
+          Transferir entre bodegas
+        </Button>
+        <Button
+          variant="outlined"
+          startIcon={<FactCheckIcon />}
+          onClick={() => setCountOpen(true)}
+        >
+          Conteo fisico
+        </Button>
+      </Stack>
+
       {error && <Alert severity="error">{error}</Alert>}
 
       <Box sx={{ height: 540 }}>
@@ -199,6 +240,30 @@ export default function StockTab() {
         onSaved={() => {
           setAdjustLevel(null);
           setToast("Stock ajustado.");
+          load();
+        }}
+      />
+
+      <TransferDialog
+        open={transferOpen}
+        initialLevel={transferLevel}
+        onClose={() => {
+          setTransferOpen(false);
+          setTransferLevel(null);
+        }}
+        onSaved={() => {
+          setTransferOpen(false);
+          setTransferLevel(null);
+          setToast("Transferencia completada.");
+          load();
+        }}
+      />
+
+      <CountDialog
+        open={countOpen}
+        onClose={() => setCountOpen(false)}
+        onApplied={() => {
+          setToast("Conteo aplicado.");
           load();
         }}
       />

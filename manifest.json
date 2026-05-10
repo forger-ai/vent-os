@@ -1,8 +1,18 @@
 {
   "name": "vent-os",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Local-first POS, sales, and inventory app for Chilean SMBs (Pymes). FastAPI backend, Vite + React frontend, SQLite storage.",
   "changelog": [
+    {
+      "version": "0.6.0",
+      "summary": "Operaciones de inventario: transferencias, conteo fisico y valorizacion.",
+      "changes": [
+        "Transferencias entre bodegas: endpoint /api/stock/transfer escribe atomicamente salida en origen + entrada en destino. Para productos con lotes, el lote destino se crea (o suma) automaticamente con el mismo numero y vencimiento.",
+        "Conteo fisico: /api/stock/count recibe lista de (variante, cantidad contada) y aplica un ajuste por cada diferencia. Los productos con lotes se saltan (requieren ajuste por lote).",
+        "Valorizacion del inventario: /api/stock/valuation con modo costo o precio, filtros por bodega/categoria/marca, totales, desglose por bodega, desglose por categoria, y top N variantes por valor.",
+        "UI: botones Transferir y Conteo fisico en la tab Stock; nueva sub-tab Valorizacion con tarjetas resumen, desgloses y ranking de variantes."
+      ]
+    },
     {
       "version": "0.5.0",
       "summary": "Imagenes de producto + importar/exportar catalogo en CSV.",

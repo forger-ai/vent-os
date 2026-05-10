@@ -4,14 +4,16 @@ import BodegasTab from "./inventario/BodegasTab";
 import LotesTab from "./inventario/LotesTab";
 import MovimientosTab from "./inventario/MovimientosTab";
 import StockTab from "./inventario/StockTab";
+import ValuationTab from "./inventario/ValuationTab";
 
-type TabKey = "stock" | "movimientos" | "bodegas" | "lotes";
+type TabKey = "stock" | "movimientos" | "bodegas" | "lotes" | "valorizacion";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "stock", label: "Stock" },
   { key: "movimientos", label: "Movimientos" },
   { key: "bodegas", label: "Bodegas" },
   { key: "lotes", label: "Lotes" },
+  { key: "valorizacion", label: "Valorizacion" },
 ];
 
 export default function InventarioPage() {
@@ -45,6 +47,7 @@ export default function InventarioPage() {
         {tab === "movimientos" && <MovimientosTab />}
         {tab === "bodegas" && <BodegasTab />}
         {tab === "lotes" && <LotesTab />}
+        {tab === "valorizacion" && <ValuationTab />}
       </Box>
     </Stack>
   );

@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.cors import allowed_origins
 from app.database import init_db
@@ -8,9 +9,12 @@ from app.routers.batches import router as batches_router
 from app.routers.cash import router as cash_router
 from app.routers.customers import router as customers_router
 from app.routers.documents import router as documents_router
+from app.routers.images import _images_dir
+from app.routers.images import router as images_router
 from app.routers.pos import router as pos_router
 from app.routers.price_lists import router as price_lists_router
 from app.routers.products import router as products_router
+from app.routers.products_csv import router as products_csv_router
 from app.routers.stock import router as stock_router
 from app.routers.tax_codes import router as tax_codes_router
 from app.routers.variants import router as variants_router
@@ -18,7 +22,7 @@ from app.routers.warehouses import router as warehouses_router
 
 app = FastAPI(
     title="Vent OS API",
-    version="0.4.0",
+    version="0.5.0",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json",
@@ -33,6 +37,10 @@ app.add_middleware(
 )
 
 app.include_router(health_router, prefix="/api")
+# CSV routes must register BEFORE the products router so their explicit paths
+# (/api/products/export.csv, /api/products/import.csv) win over the
+# /{product_id} catch-all.
+app.include_router(products_csv_router, prefix="/api/products", tags=["products-csv"])
 app.include_router(products_router, prefix="/api/products", tags=["products"])
 app.include_router(variants_router, prefix="/api", tags=["variants"])
 app.include_router(warehouses_router, prefix="/api/warehouses", tags=["warehouses"])
@@ -40,6 +48,12 @@ app.include_router(stock_router, prefix="/api/stock", tags=["stock"])
 app.include_router(batches_router, prefix="/api", tags=["batches"])
 app.include_router(tax_codes_router, prefix="/api/tax-codes", tags=["tax-codes"])
 app.include_router(price_lists_router, prefix="/api/price-lists", tags=["price-lists"])
+app.include_router(images_router, prefix="/api", tags=["images"])
+app.mount(
+    "/api/images/serve",
+    StaticFiles(directory=str(_images_dir())),
+    name="images-static",
+)
 app.include_router(customers_router, prefix="/api/customers", tags=["customers"])
 app.include_router(documents_router, prefix="/api/documents", tags=["documents"])
 app.include_router(pos_router, prefix="/api/pos", tags=["pos"])

@@ -29,6 +29,7 @@ import { type VariantRow, deactivateVariant, listVariants } from "../../api/vari
 import { type StockLevelRow, stockByVariant } from "../../api/stock";
 import { formatCLP, formatQty, formatVariantTitle } from "../../util/format";
 import VariantDialog from "./VariantDialog";
+import ImageGallery from "./ImageGallery";
 
 interface ProductDetailDrawerProps {
   productId: string | null;
@@ -37,7 +38,7 @@ interface ProductDetailDrawerProps {
   onChanged: () => void;
 }
 
-type TabKey = "variantes" | "stock";
+type TabKey = "variantes" | "stock" | "imagenes";
 
 export default function ProductDetailDrawer({
   productId,
@@ -155,6 +156,7 @@ export default function ProductDetailDrawer({
         <Tabs value={tab} onChange={(_, v) => setTab(v as TabKey)} sx={{ px: 2 }}>
           <Tab value="variantes" label={`Variantes (${variants.length})`} />
           <Tab value="stock" label="Stock por bodega" />
+          <Tab value="imagenes" label="Imagenes" />
         </Tabs>
         <Divider />
 
@@ -334,6 +336,10 @@ export default function ProductDetailDrawer({
                 "Inventario".
               </Alert>
             </Stack>
+          )}
+
+          {!loading && tab === "imagenes" && product && (
+            <ImageGallery productId={product.id} />
           )}
         </Box>
       </Box>

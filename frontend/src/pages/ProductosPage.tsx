@@ -17,9 +17,11 @@ import {
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import DownloadIcon from "@mui/icons-material/Download";
 import EditIcon from "@mui/icons-material/Edit";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import UploadIcon from "@mui/icons-material/Upload";
 import {
   DataGrid,
   type GridColDef,
@@ -39,9 +41,11 @@ import {
   listCategories,
   listProducts,
 } from "../api/products";
+import { downloadProductsCsv } from "../api/csv";
 import { formatCLPRange, formatQty } from "../util/format";
 import ProductDialog from "./productos/ProductDialog";
 import ProductDetailDrawer from "./productos/ProductDetailDrawer";
+import CsvImportDialog from "./productos/CsvImportDialog";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
@@ -82,6 +86,8 @@ export default function ProductosPage() {
 
   const [detailId, setDetailId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [csvImportOpen, setCsvImportOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const refreshFilters = useCallback(async () => {
     try {
@@ -334,6 +340,30 @@ export default function ProductosPage() {
               <RefreshIcon />
             </IconButton>
           </Tooltip>
+          <Button
+            variant="outlined"
+            startIcon={<DownloadIcon />}
+            disabled={exporting}
+            onClick={async () => {
+              setExporting(true);
+              try {
+                await downloadProductsCsv(showInactive);
+              } catch {
+                setError("No se pudo exportar el catalogo.");
+              } finally {
+                setExporting(false);
+              }
+            }}
+          >
+            Exportar CSV
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<UploadIcon />}
+            onClick={() => setCsvImportOpen(true)}
+          >
+            Importar CSV
+          </Button>
           <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
             Nuevo producto
           </Button>
@@ -459,6 +489,16 @@ export default function ProductosPage() {
           setDrawerOpen(false);
         }}
         onChanged={() => {
+          fetchPage();
+          refreshFilters();
+        }}
+      />
+
+      <CsvImportDialog
+        open={csvImportOpen}
+        onClose={() => setCsvImportOpen(false)}
+        onImported={() => {
+          setToast("Catalogo actualizado desde CSV.");
           fetchPage();
           refreshFilters();
         }}

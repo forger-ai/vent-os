@@ -1,8 +1,19 @@
 {
   "name": "vent-os",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Local-first POS, sales, and inventory app for Chilean SMBs (Pymes). FastAPI backend, Vite + React frontend, SQLite storage.",
   "changelog": [
+    {
+      "version": "0.5.0",
+      "summary": "Imagenes de producto + importar/exportar catalogo en CSV.",
+      "changes": [
+        "Subir imagenes a cada producto (PNG/JPG/WEBP/GIF, max 8 MB). Una marcada como principal aparece destacada.",
+        "Las imagenes viven en {app_data}/images/ y se sirven via /api/images/serve/{filename}.",
+        "Exportar catalogo completo a CSV: una fila por variante con producto, atributos en formato Talla=L;Color=Negro y todos los campos relevantes.",
+        "Importar CSV con modo dry-run obligatorio: valida el archivo y devuelve reporte fila por fila antes de tocar la base. Si hay errores en el modo aplicar, se hace rollback automatico.",
+        "Reconocimiento de productos por product_id (round-trip del export) o por nombre case-insensitive; variantes por variant_id o por SKU (que sigue siendo unico globalmente)."
+      ]
+    },
     {
       "version": "0.4.0",
       "summary": "Impuestos adicionales (ILA, especificos) y listas de precios multiples.",

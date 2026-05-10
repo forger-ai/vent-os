@@ -28,6 +28,12 @@ import {
   listAttributeNames,
   updateVariant,
 } from "../../api/variants";
+import {
+  type TaxCodeRow,
+  listTaxCodes,
+  listVariantTaxCodes,
+  replaceVariantTaxCodes,
+} from "../../api/tax_codes";
 
 interface VariantDialogProps {
   open: boolean;
@@ -84,6 +90,8 @@ export default function VariantDialog({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [attributeNames, setAttributeNames] = useState<string[]>([]);
+  const [availableTaxCodes, setAvailableTaxCodes] = useState<TaxCodeRow[]>([]);
+  const [selectedTaxCodes, setSelectedTaxCodes] = useState<TaxCodeRow[]>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -92,6 +100,16 @@ export default function VariantDialog({
     listAttributeNames()
       .then(setAttributeNames)
       .catch(() => {});
+    listTaxCodes(false)
+      .then(setAvailableTaxCodes)
+      .catch(() => setAvailableTaxCodes([]));
+    if (initial) {
+      listVariantTaxCodes(initial.id)
+        .then(setSelectedTaxCodes)
+        .catch(() => setSelectedTaxCodes([]));
+    } else {
+      setSelectedTaxCodes([]);
+    }
   }, [open, initial]);
 
   const setField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
@@ -127,6 +145,7 @@ export default function VariantDialog({
       .filter((a) => a.name && a.value);
     setSaving(true);
     try {
+      let saved: VariantRow;
       if (editing && initial) {
         const body: VariantUpdateInput = {
           sku: form.sku.trim(),
@@ -138,8 +157,7 @@ export default function VariantDialog({
           is_active: form.is_active,
           attributes: cleanAttrs,
         };
-        const saved = await updateVariant(initial.id, body);
-        onSaved(saved);
+        saved = await updateVariant(initial.id, body);
       } else {
         const body: VariantCreateInput = {
           sku: form.sku.trim(),
@@ -151,9 +169,13 @@ export default function VariantDialog({
           is_active: form.is_active,
           attributes: cleanAttrs,
         };
-        const saved = await createVariant(productId, body);
-        onSaved(saved);
+        saved = await createVariant(productId, body);
       }
+      await replaceVariantTaxCodes(
+        saved.id,
+        selectedTaxCodes.map((t) => t.id),
+      );
+      onSaved(saved);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "No se pudo guardar la variante.");
     } finally {
@@ -248,6 +270,34 @@ export default function VariantDialog({
               />
             </Grid>
           </Grid>
+
+          <Stack spacing={1}>
+            <Typography variant="subtitle2" fontWeight={600}>
+              Impuestos adicionales
+            </Typography>
+            {availableTaxCodes.length === 0 ? (
+              <Typography variant="caption" color="text.secondary">
+                Sin codigos de impuestos configurados. Crea uno desde la pestana
+                Configuracion - Impuestos.
+              </Typography>
+            ) : (
+              <Autocomplete
+                multiple
+                options={availableTaxCodes}
+                getOptionLabel={(o) => `${o.code} · ${o.name} (${(o.rate * 100).toFixed(2)}%)`}
+                value={selectedTaxCodes}
+                onChange={(_, v) => setSelectedTaxCodes(v)}
+                isOptionEqualToValue={(o, v) => o.id === v.id}
+                renderInput={(p) => (
+                  <TextField
+                    {...p}
+                    label="Codigos aplicables (ILA, especificos, ...)"
+                    placeholder="Selecciona uno o varios"
+                  />
+                )}
+              />
+            )}
+          </Stack>
 
           <Stack spacing={1}>
             <Stack direction="row" alignItems="center" justifyContent="space-between">

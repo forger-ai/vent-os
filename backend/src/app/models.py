@@ -144,6 +144,94 @@ class VariantAttribute(SQLModel, table=True):
     value: str = Field(description="e.g., 'L', 'Negro', 'Algodon'")
 
 
+class ProductImage(SQLModel, table=True):
+    """Image attached to a product (default for all variants) or a specific variant.
+
+    Exactly one of product_id / variant_id must be set. The file lives under
+    {data}/images/<filename>; the API serves it at /api/images/<filename>.
+    """
+
+    id: str = Field(default_factory=new_id, primary_key=True)
+    product_id: Optional[str] = Field(default=None, foreign_key="product.id", index=True)
+    variant_id: Optional[str] = Field(default=None, foreign_key="productvariant.id", index=True)
+    filename: str = Field(description="Filename relative to {app_data}/images/.")
+    content_type: Optional[str] = None
+    size_bytes: Optional[int] = None
+    is_primary: bool = Field(default=False)
+    created_at: datetime = Field(default_factory=utcnow)
+
+
+# ── Tax codes ─────────────────────────────────────────────────────────────────
+
+
+class TaxCode(SQLModel, table=True):
+    """Additional tax (ILA, Bebidas azucaradas, etc.) applied on top of IVA.
+
+    A variant can have zero or more tax codes via ProductVariantTaxCode.
+    The rate is a fraction (e.g., 0.315 for 31.5%).
+    """
+
+    id: str = Field(default_factory=new_id, primary_key=True)
+    code: str = Field(index=True, unique=True, description="Short identifier: ILA_FUERTE, AZUCARADA_18.")
+    name: str
+    description: Optional[str] = None
+    rate: Decimal = Field(default=Decimal("0"), description="Fraction; 0.18 means 18%.")
+    is_active: bool = Field(default=True)
+    created_at: datetime = Field(default_factory=utcnow)
+    updated_at: datetime = Field(default_factory=utcnow)
+
+
+class ProductVariantTaxCode(SQLModel, table=True):
+    """M:N join between ProductVariant and TaxCode."""
+
+    __table_args__ = (
+        UniqueConstraint(
+            "variant_id", "tax_code_id", name="uq_variant_tax_code"
+        ),
+    )
+
+    id: str = Field(default_factory=new_id, primary_key=True)
+    variant_id: str = Field(foreign_key="productvariant.id", index=True)
+    tax_code_id: str = Field(foreign_key="taxcode.id", index=True)
+
+
+# ── Price lists ───────────────────────────────────────────────────────────────
+
+
+class PriceList(SQLModel, table=True):
+    """A named pricing scheme (Minorista, Mayorista, VIP, etc.).
+
+    The default price list resolves to variant.price_clp. Non-default lists
+    may have per-variant overrides stored as PriceListEntry rows; when no
+    entry exists, the variant base price is the effective price.
+    """
+
+    id: str = Field(default_factory=new_id, primary_key=True)
+    code: str = Field(index=True, unique=True, description="Short identifier: RETAIL, WHOLESALE.")
+    name: str
+    description: Optional[str] = None
+    is_default: bool = Field(default=False)
+    is_active: bool = Field(default=True)
+    created_at: datetime = Field(default_factory=utcnow)
+    updated_at: datetime = Field(default_factory=utcnow)
+
+
+class PriceListEntry(SQLModel, table=True):
+    """Per-variant override price within a non-default price list."""
+
+    __table_args__ = (
+        UniqueConstraint(
+            "price_list_id", "variant_id", name="uq_price_list_variant"
+        ),
+    )
+
+    id: str = Field(default_factory=new_id, primary_key=True)
+    price_list_id: str = Field(foreign_key="pricelist.id", index=True)
+    variant_id: str = Field(foreign_key="productvariant.id", index=True)
+    price_clp: Decimal = Field(default=Decimal("0"))
+    updated_at: datetime = Field(default_factory=utcnow)
+
+
 # ── Customers ─────────────────────────────────────────────────────────────────
 
 

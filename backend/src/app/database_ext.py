@@ -298,6 +298,30 @@ def _backfill_variants_from_legacy(
     )
 
 
+def _ensure_default_price_list() -> str:
+    """Insert a default PriceList if no rows exist. Returns its id."""
+    with engine.connect() as conn:
+        existing = conn.execute(text("SELECT id FROM pricelist LIMIT 1")).first()
+    if existing:
+        return str(existing[0])
+
+    from uuid import uuid4
+
+    pl_id = str(uuid4())
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                "INSERT INTO pricelist (id, code, name, is_default, is_active, "
+                "created_at, updated_at) VALUES (:id, :code, :name, 1, 1, "
+                "CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            ),
+            {"id": pl_id, "code": "RETAIL", "name": "Lista minorista"},
+        )
+    logger.info("vent-os migration: created default price list %s", pl_id)
+    return pl_id
+
+
 def run_post_create_migrations(context: MigrationContext) -> None:
     default_wh = _ensure_default_warehouse()
     _backfill_variants_from_legacy(context.legacy_products, default_wh)
+    _ensure_default_price_list()

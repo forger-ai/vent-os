@@ -1,8 +1,19 @@
 {
   "name": "vent-os",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Local-first POS, sales, and inventory app for Chilean SMBs (Pymes). FastAPI backend, Vite + React frontend, SQLite storage.",
   "changelog": [
+    {
+      "version": "0.4.0",
+      "summary": "Impuestos adicionales (ILA, especificos) y listas de precios multiples.",
+      "changes": [
+        "Codigos de impuestos: CRUD de impuestos especiales con tasa porcentual (ILA, bebidas azucaradas, especifico al tabaco, etc.). Cada variante puede tener cero o varios codigos asignados.",
+        "Listas de precios: lista por defecto (Lista minorista) creada automaticamente + creacion de listas adicionales. Cada lista puede sobrescribir el precio por variante; si no hay override, hereda del precio base.",
+        "Endpoint /api/price-lists/resolve para obtener el precio efectivo dado (lista, variante).",
+        "Nueva pestana Configuracion con sub-tabs Impuestos y Listas de precios.",
+        "VariantDialog ahora permite asignar codigos de impuestos a cada variante al crear o editar."
+      ]
+    },
     {
       "version": "0.3.0",
       "summary": "Variantes, multi-bodega y lotes con vencimientos.",

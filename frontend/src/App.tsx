@@ -17,6 +17,7 @@ import PosPage from "./pages/PosPage";
 import DocumentosPage from "./pages/DocumentosPage";
 import InventarioPage from "./pages/InventarioPage";
 import CajaPage from "./pages/CajaPage";
+import ConfiguracionPage from "./pages/ConfiguracionPage";
 
 type HealthStatus = "loading" | "ok" | "error";
 
@@ -27,6 +28,7 @@ const TABS = [
   { id: "documentos", label: "Documentos" },
   { id: "inventario", label: "Inventario" },
   { id: "caja", label: "Caja" },
+  { id: "config", label: "Configuracion" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -82,6 +84,7 @@ export default function App() {
         {tab === "documentos" && <DocumentosPage />}
         {tab === "inventario" && <InventarioPage />}
         {tab === "caja" && <CajaPage />}
+        {tab === "config" && <ConfiguracionPage />}
       </Container>
     </Box>
   );

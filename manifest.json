@@ -1,8 +1,20 @@
 {
   "name": "vent-os",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Local-first POS, sales, and inventory app for Chilean SMBs (Pymes). FastAPI backend, Vite + React frontend, SQLite storage.",
   "changelog": [
+    {
+      "version": "0.3.0",
+      "summary": "Variantes, multi-bodega y lotes con vencimientos.",
+      "changes": [
+        "Productos ahora tienen variantes con SKU, precio, costo y stock minimo propios. Atributos libres tipo Shopify (Talla, Color, Material, ...).",
+        "Multi-bodega: stock por (variante, bodega). Endpoint /api/warehouses con bodega por defecto, codigos cortos y soft delete.",
+        "Lotes opcionales por producto (tracks_batches). Cada lote tiene numero, vencimiento y stock; vista de proximos a vencer con alertas.",
+        "Ajustes de stock (entrada/salida/ajuste) con motivo, validacion de stock insuficiente y registro automatico de movimientos.",
+        "Tab Inventario reorganizada en sub-pantallas: Stock, Movimientos, Bodegas y Lotes.",
+        "Migracion v0.2 -> v0.3: cada producto existente se transforma en producto + una variante + stock_level en la bodega por defecto, sin perdida de datos."
+      ]
+    },
     {
       "version": "0.2.0",
       "summary": "Catalogo de productos funcional: crear, editar, buscar, filtrar y desactivar.",

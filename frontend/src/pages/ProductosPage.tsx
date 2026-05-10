@@ -18,6 +18,7 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EditIcon from "@mui/icons-material/Edit";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import {
   DataGrid,
@@ -25,6 +26,7 @@ import {
   type GridPaginationModel,
   type GridSortModel,
 } from "@mui/x-data-grid";
+import { ApiError } from "../api/client";
 import {
   type ListProductsParams,
   type ProductDetail,
@@ -37,28 +39,19 @@ import {
   listCategories,
   listProducts,
 } from "../api/products";
-import { ApiError } from "../api/client";
+import { formatCLPRange, formatQty } from "../util/format";
 import ProductDialog from "./productos/ProductDialog";
+import ProductDetailDrawer from "./productos/ProductDetailDrawer";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
 type SortField = NonNullable<ListProductsParams["sort"]>;
 
 const SORT_FIELD_BY_COLUMN: Record<string, SortField> = {
-  sku: "sku",
   name: "name",
   category: "category",
   brand: "brand",
-  price_clp: "price",
-  stock_qty: "stock",
 };
-
-const formatCLP = (value: number): string =>
-  new Intl.NumberFormat("es-CL", {
-    style: "currency",
-    currency: "CLP",
-    maximumFractionDigits: 0,
-  }).format(value);
 
 export default function ProductosPage() {
   const [rows, setRows] = useState<ProductRow[]>([]);
@@ -86,6 +79,9 @@ export default function ProductosPage() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<ProductDetail | null>(null);
+
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const refreshFilters = useCallback(async () => {
     try {
@@ -164,21 +160,30 @@ export default function ProductosPage() {
     }
   };
 
+  const openDetail = (id: string) => {
+    setDetailId(id);
+    setDrawerOpen(true);
+  };
+
   const handleSaved = (saved: ProductDetail) => {
     setDialogOpen(false);
     setEditing(null);
-    setToast(`Producto ${saved.sku} guardado.`);
+    setToast(`Producto "${saved.name}" guardado.`);
     fetchPage();
     refreshFilters();
   };
 
   const handleDeactivate = async (row: ProductRow) => {
-    if (!confirm(`Desactivar "${row.name}"? Quedara oculto pero su historico se conserva.`)) {
+    if (
+      !confirm(
+        `Desactivar "${row.name}" y todas sus variantes? Los historicos se conservan.`,
+      )
+    ) {
       return;
     }
     try {
       await deactivateProduct(row.id);
-      setToast(`${row.sku} desactivado.`);
+      setToast(`"${row.name}" desactivado.`);
       fetchPage();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "No se pudo desactivar.");
@@ -188,27 +193,26 @@ export default function ProductosPage() {
   const columns: GridColDef<ProductRow>[] = useMemo(
     () => [
       {
-        field: "sku",
-        headerName: "SKU",
-        width: 130,
-        sortable: true,
-      },
-      {
         field: "name",
-        headerName: "Nombre",
+        headerName: "Producto",
         flex: 1.5,
-        minWidth: 200,
+        minWidth: 240,
         sortable: true,
         renderCell: (params) => (
           <Stack direction="row" alignItems="center" spacing={1} sx={{ width: "100%" }}>
             <Typography variant="body2" sx={{ fontWeight: 500 }} noWrap>
               {params.row.name}
             </Typography>
+            {params.row.tracks_batches && (
+              <Tooltip title="Maneja lotes y vencimientos">
+                <Chip size="small" label="Lotes" color="warning" variant="outlined" />
+              </Tooltip>
+            )}
             {params.row.product_type === "service" && (
-              <Chip label="Servicio" size="small" variant="outlined" />
+              <Chip size="small" label="Servicio" variant="outlined" />
             )}
             {!params.row.is_active && (
-              <Chip label="Inactivo" size="small" color="default" />
+              <Chip size="small" label="Inactivo" color="default" />
             )}
           </Stack>
         ),
@@ -228,30 +232,39 @@ export default function ProductosPage() {
         valueGetter: (_, row) => row.brand ?? "—",
       },
       {
-        field: "price_clp",
-        headerName: "Precio",
-        width: 120,
-        sortable: true,
+        field: "variant_count",
+        headerName: "Variantes",
+        width: 110,
+        sortable: false,
         align: "right",
         headerAlign: "right",
-        valueFormatter: (value: number) => formatCLP(value),
       },
       {
-        field: "stock_qty",
-        headerName: "Stock",
-        width: 110,
-        sortable: true,
+        field: "price_range",
+        headerName: "Precio",
+        width: 160,
+        sortable: false,
+        align: "right",
+        headerAlign: "right",
+        renderCell: (params) =>
+          formatCLPRange(params.row.min_price_clp, params.row.max_price_clp),
+      },
+      {
+        field: "total_stock_qty",
+        headerName: "Stock total",
+        width: 130,
+        sortable: false,
         align: "right",
         headerAlign: "right",
         renderCell: (params) => {
           if (params.row.product_type === "service") {
             return <Typography variant="body2" color="text.secondary">—</Typography>;
           }
-          const value = `${params.row.stock_qty} ${params.row.unit}`;
+          const text = formatQty(params.row.total_stock_qty, params.row.unit);
           return params.row.low_stock ? (
-            <Chip label={value} color="error" size="small" />
+            <Chip label={text} color="error" size="small" />
           ) : (
-            <Typography variant="body2">{value}</Typography>
+            <Typography variant="body2">{text}</Typography>
           );
         },
       },
@@ -270,12 +283,17 @@ export default function ProductosPage() {
       {
         field: "actions",
         headerName: "",
-        width: 110,
+        width: 140,
         sortable: false,
         filterable: false,
         renderCell: (params) => (
           <Stack direction="row" spacing={0.5}>
-            <Tooltip title="Editar">
+            <Tooltip title="Variantes y stock">
+              <IconButton size="small" onClick={() => openDetail(params.row.id)}>
+                <OpenInNewIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Editar producto">
               <IconButton size="small" onClick={() => openEdit(params.row.id)}>
                 <EditIcon fontSize="small" />
               </IconButton>
@@ -306,7 +324,8 @@ export default function ProductosPage() {
             Productos
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Catalogo con SKU, codigo de barras, precio, costo, IVA y stock.
+            Cada producto puede tener una o varias variantes (talla, color, etc.) con su
+            propio SKU, precio y stock por bodega.
           </Typography>
         </Box>
         <Stack direction="row" spacing={1}>
@@ -324,7 +343,7 @@ export default function ProductosPage() {
       <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems="center">
         <TextField
           label="Buscar"
-          placeholder="SKU, nombre o codigo de barras"
+          placeholder="Nombre, SKU o codigo de barras"
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -417,7 +436,7 @@ export default function ProductosPage() {
           onSortModelChange={setSortModel}
           pageSizeOptions={PAGE_SIZE_OPTIONS}
           disableRowSelectionOnClick
-          onRowDoubleClick={(params) => openEdit(params.row.id)}
+          onRowDoubleClick={(params) => openDetail(params.row.id)}
         />
       </Box>
 
@@ -431,6 +450,18 @@ export default function ProductosPage() {
           setEditing(null);
         }}
         onSaved={handleSaved}
+      />
+
+      <ProductDetailDrawer
+        productId={detailId}
+        open={drawerOpen}
+        onClose={() => {
+          setDrawerOpen(false);
+        }}
+        onChanged={() => {
+          fetchPage();
+          refreshFilters();
+        }}
       />
 
       <Snackbar

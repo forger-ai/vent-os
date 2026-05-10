@@ -1,6 +1,22 @@
-import { Alert, Box, Stack, Typography } from "@mui/material";
+import { useState } from "react";
+import { Box, Stack, Tab, Tabs, Typography } from "@mui/material";
+import BodegasTab from "./inventario/BodegasTab";
+import LotesTab from "./inventario/LotesTab";
+import MovimientosTab from "./inventario/MovimientosTab";
+import StockTab from "./inventario/StockTab";
+
+type TabKey = "stock" | "movimientos" | "bodegas" | "lotes";
+
+const TABS: { key: TabKey; label: string }[] = [
+  { key: "stock", label: "Stock" },
+  { key: "movimientos", label: "Movimientos" },
+  { key: "bodegas", label: "Bodegas" },
+  { key: "lotes", label: "Lotes" },
+];
 
 export default function InventarioPage() {
+  const [tab, setTab] = useState<TabKey>("stock");
+
   return (
     <Stack spacing={2}>
       <Box>
@@ -8,14 +24,28 @@ export default function InventarioPage() {
           Inventario
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Movimientos de entrada, salida y ajuste de stock con motivo y
-          documento opcional.
+          Stock por variante y bodega, historial de movimientos, gestion de bodegas y
+          lotes con vencimientos.
         </Typography>
       </Box>
-      <Alert severity="info">
-        Sin movimientos registrados. El control de inventario se implementara
-        en una proxima version.
-      </Alert>
+
+      <Tabs
+        value={tab}
+        onChange={(_, v) => setTab(v as TabKey)}
+        variant="scrollable"
+        scrollButtons="auto"
+      >
+        {TABS.map((t) => (
+          <Tab key={t.key} value={t.key} label={t.label} />
+        ))}
+      </Tabs>
+
+      <Box sx={{ pt: 1 }}>
+        {tab === "stock" && <StockTab />}
+        {tab === "movimientos" && <MovimientosTab />}
+        {tab === "bodegas" && <BodegasTab />}
+        {tab === "lotes" && <LotesTab />}
+      </Box>
     </Stack>
   );
 }

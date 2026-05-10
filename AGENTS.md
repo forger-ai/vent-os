@@ -18,7 +18,7 @@ Key rule: internal tools can be used to execute tasks, but they must not be pres
 - id: `vent-os`
 - recommended visible name: `Vent OS`
 - type: local-first POS, sales, and inventory app for Chilean SMBs (Pymes)
-- status: products module funcional (CRUD completo). El resto (clientes, POS, documentos, inventario, caja) sigue como scaffolding
+- status: catalog + inventory funcional (productos con variantes, multi-bodega, lotes y vencimientos). El resto (clientes, POS, documentos, caja) sigue como scaffolding
 
 ## Functional Goal
 
@@ -46,13 +46,14 @@ All data lives on the user's machine. **This version does not emit electronic do
 
 ## Real Functional Scope
 
-### What It Does Today (v0.2.x)
+### What It Does Today (v0.3.x)
 
 - starts a frontend and backend locally
 - responds to `GET /api/health`
 - shows a six-tab shell: Productos, Clientes, POS, Documentos, Inventario, Caja
-- **Productos: funcional**. Crear, editar, buscar (SKU/nombre/codigo de barras), filtrar (categoria, marca, tipo, activos, stock bajo), desactivar. Producto soporta tipo `product` o `service` (servicios no manejan stock).
-- Clientes, POS, Documentos, Inventario y Caja: scaffolding (modelos declarados, endpoints devuelven listas vacias, UI muestra Alerts informativos)
+- **Productos: funcional con variantes y atributos**. Cada producto es un "template" que tiene una o varias variantes (talla, color, etc.) con su propio SKU, precio y stock. Atributos libres tipo Shopify. Crear, editar, buscar (SKU/nombre/codigo de barras), filtrar (categoria, marca, tipo, activos, stock bajo), desactivar producto o variante. Producto soporta `product` o `service` (servicios no manejan stock).
+- **Inventario: funcional con multi-bodega y lotes**. Sub-tabs: Stock (vista y ajustes), Movimientos (historial), Bodegas (CRUD), Lotes (lotes con vencimientos y vista de proximos a vencer). Stock se trackea por (variante, bodega), opcionalmente por lote si el producto tiene `tracks_batches=True`.
+- Clientes, POS, Documentos y Caja: scaffolding (modelos declarados, endpoints devuelven listas vacias, UI muestra Alerts informativos)
 
 ### What It Does Not Do Today
 
@@ -70,27 +71,62 @@ The agent must not invent capabilities outside this scope. When the user asks ab
 
 These are the actions you can present as real to the final user — at the **scaffolding** level (the UI exists, business logic is pending).
 
-### 1. Product Catalog (funcional desde v0.2.0)
+### 1. Product Catalog with variants (v0.3.0+)
 
 The user can ask:
 
 - "que productos tengo cargados?"
 - "agrega el producto X con precio Y"
-- "cual es el stock de X?"
+- "cual es el stock de X en la bodega Y?"
 - "cuales productos estan en stock bajo?"
-- "desactiva el producto X"
+- "agrega una variante talla L color rojo al producto Z"
+- "desactiva el producto X" o "desactiva esta variante"
 
 What works today:
 
-- crear, editar y desactivar productos desde la UI
-- buscar por SKU, nombre o codigo de barras
+- crear, editar y desactivar productos (template) desde la UI; al crear se exige al menos una variante
+- agregar/editar/desactivar variantes dentro del detalle del producto, con atributos libres (Talla, Color, Material, etc.)
+- buscar por SKU, nombre o codigo de barras (busca a nivel producto y variantes)
 - filtrar por categoria, marca, tipo (producto/servicio), activos o stock bajo
-- el listado pagina del lado del servidor con orden configurable
-- indicador visual rojo cuando `stock_qty <= stock_min` (solo aplica a productos, no servicios)
+- listado pagina del lado del servidor con orden configurable
 
-The agent debe distinguir entre **producto** (maneja stock) y **servicio** (no maneja stock). Para servicios los campos de stock se ignoran.
+The agent debe distinguir entre **producto** (maneja stock) y **servicio** (no maneja stock). Tambien debe distinguir entre **producto template** (cabecera) y **variante** (item vendible). El SKU vive en la variante, no en el producto.
 
-Desactivar es soft delete: el producto se oculta del listado por defecto pero su id sigue siendo valido para documentos historicos.
+Desactivar producto es soft delete y cascadea a sus variantes. Desactivar una variante deja las demas activas.
+
+### 2. Multi-warehouse stock (v0.3.0+)
+
+The user can ask:
+
+- "cuanto stock tengo de X en la bodega Y?"
+- "transfiere 5 unidades de la bodega central al local centro" (en v0.3 se hace via dos ajustes: salida en una + entrada en la otra)
+- "registra entrada de 20 unidades de X" (sin especificar bodega -> default)
+- "que se vendio o se ajusto esta semana?"
+
+What works today:
+
+- bodegas (warehouses) con codigo corto unico, una marcada como `is_default`
+- stock por (variante, bodega) en la tabla `stocklevel`
+- ajustes con kind=entrada/salida/ajuste:
+  - entrada: suma `quantity` al stock
+  - salida: resta `quantity`; rechaza si dejaria stock negativo
+  - ajuste: setea el stock al `target_qty` exacto, calcula delta solo
+- cada ajuste deja un `stockmovement` con motivo y `qty_after` (snapshot post-movimiento)
+
+### 3. Batches and expiry (v0.3.0+)
+
+Solo aplica a productos con `tracks_batches=True`. The user can ask:
+
+- "que lotes de X vencen pronto?"
+- "agrega lote LOT-2026-05 de X con 100 unidades, vence 2026-11-30"
+- "que lotes estan vencidos?"
+
+What works today:
+
+- crear lote con bodega, numero de lote, vencimiento opcional, y cantidad inicial (queda registrada como entrada de stock)
+- listado de lotes proximos a vencer (within_days configurable, incluye vencidos con qty>0)
+- ajustes de stock en productos con tracks_batches **deben** especificar batch_id; el sistema rechaza si no
+- eliminar lote solo si su qty es 0 (se preserva historial via `stockmovement.batch_id`)
 
 ### 2. Customer Registry
 

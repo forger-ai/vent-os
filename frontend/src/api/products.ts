@@ -4,21 +4,35 @@ export type ProductType = "product" | "service";
 
 export type ProductUnit = "unit" | "kg" | "g" | "l" | "ml" | "m" | "box";
 
+export interface AttributeInput {
+  name: string;
+  value: string;
+}
+
+export interface InitialVariantInput {
+  sku: string;
+  barcode?: string | null;
+  display_name?: string | null;
+  price_clp: number;
+  cost_clp?: number | null;
+  stock_min: number;
+  attributes: AttributeInput[];
+}
+
 export interface ProductRow {
   id: string;
-  sku: string;
-  barcode: string | null;
   name: string;
   category: string | null;
   brand: string | null;
   product_type: ProductType;
   unit: ProductUnit;
-  price_clp: number;
-  cost_clp: number | null;
   iva_affected: boolean;
-  stock_qty: number;
-  stock_min: number;
+  tracks_batches: boolean;
   is_active: boolean;
+  variant_count: number;
+  min_price_clp: number | null;
+  max_price_clp: number | null;
+  total_stock_qty: number;
   low_stock: boolean;
 }
 
@@ -41,27 +55,36 @@ export interface ListProductsParams {
   product_type?: ProductType;
   is_active?: boolean;
   low_stock_only?: boolean;
-  sort?: "sku" | "name" | "category" | "brand" | "price" | "stock" | "updated_at";
+  sort?: "name" | "category" | "brand" | "price" | "stock" | "updated_at";
   order?: "asc" | "desc";
   limit?: number;
   offset?: number;
 }
 
-export interface ProductInput {
-  sku: string;
-  barcode?: string | null;
+export interface ProductCreateInput {
   name: string;
   description?: string | null;
   category?: string | null;
   brand?: string | null;
   product_type: ProductType;
   unit: ProductUnit;
-  price_clp: number;
-  cost_clp?: number | null;
   iva_affected: boolean;
-  stock_qty: number;
-  stock_min: number;
+  tracks_batches: boolean;
   is_active: boolean;
+  notes?: string | null;
+  initial_variant: InitialVariantInput;
+}
+
+export interface ProductUpdateInput {
+  name?: string;
+  description?: string | null;
+  category?: string | null;
+  brand?: string | null;
+  product_type?: ProductType;
+  unit?: ProductUnit;
+  iva_affected?: boolean;
+  tracks_batches?: boolean;
+  is_active?: boolean;
   notes?: string | null;
 }
 
@@ -87,10 +110,10 @@ export const listCategories = (signal?: AbortSignal) =>
 export const listBrands = (signal?: AbortSignal) =>
   get<string[]>("/api/products/brands", signal);
 
-export const createProduct = (body: ProductInput) =>
+export const createProduct = (body: ProductCreateInput) =>
   post<ProductDetail>("/api/products", body);
 
-export const updateProduct = (id: string, body: Partial<ProductInput>) =>
+export const updateProduct = (id: string, body: ProductUpdateInput) =>
   patch<ProductDetail>(`/api/products/${id}`, body);
 
 export const deactivateProduct = (id: string) =>

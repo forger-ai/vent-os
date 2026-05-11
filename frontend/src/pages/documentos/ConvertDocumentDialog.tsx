@@ -20,17 +20,17 @@ import {
   type PaymentMethodRow,
   listPaymentMethods,
 } from "../../api/payment_methods";
+import { convertDocument } from "../../api/documents";
 import {
   type CheckoutPaymentInput,
   type DocumentOut,
   type DocumentType,
 } from "../../api/pos";
-import { convertQuote } from "../../api/quotes";
 import { formatCLP } from "../../util/format";
 
-interface ConvertQuoteDialogProps {
+interface ConvertDocumentDialogProps {
   open: boolean;
-  quote: DocumentOut | null;
+  document: DocumentOut | null;
   onClose: () => void;
   onConverted: (newDoc: DocumentOut) => void;
 }
@@ -41,12 +41,12 @@ interface PaymentLine {
   reference: string;
 }
 
-export default function ConvertQuoteDialog({
+export default function ConvertDocumentDialog({
   open,
-  quote,
+  document: src,
   onClose,
   onConverted,
-}: ConvertQuoteDialogProps) {
+}: ConvertDocumentDialogProps) {
   const [targetType, setTargetType] = useState<DocumentType>("boleta");
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodRow[]>([]);
   const [payments, setPayments] = useState<PaymentLine[]>([]);
@@ -55,31 +55,35 @@ export default function ConvertQuoteDialog({
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!open || !quote) return;
+    if (!open || !src) return;
     setError(null);
     setTargetType("boleta");
-    setNotes(`Convertido desde cotizacion #${quote.folio}`);
+    const label =
+      src.document_type === "cotizacion" ? "cotizacion" : "guia de despacho";
+    setNotes(`Convertido desde ${label} #${src.folio}`);
     listPaymentMethods(false)
       .then((pms) => {
         setPaymentMethods(pms);
         const cash = pms.find((m) => m.is_cash) ?? pms[0];
         if (cash) {
           setPayments([
-            { payment_method_id: cash.id, amount_clp: quote.total_clp, reference: "" },
+            { payment_method_id: cash.id, amount_clp: src.total_clp, reference: "" },
           ]);
         }
       })
       .catch(() => setPaymentMethods([]));
-  }, [open, quote]);
+  }, [open, src]);
 
-  if (!quote) return null;
+  if (!src) return null;
+  const sourceLabel =
+    src.document_type === "cotizacion" ? "cotizacion" : "guia de despacho";
 
   const paymentsTotal = payments.reduce(
     (acc, p) => acc + (Number(p.amount_clp) || 0),
     0,
   );
-  const delta = quote.total_clp - paymentsTotal;
-  const hasRut = quote.customer_rut && quote.customer_rut.trim();
+  const delta = src.total_clp - paymentsTotal;
+  const hasRut = src.customer_rut && src.customer_rut.trim();
   const canFactura = Boolean(hasRut);
 
   const handleSubmit = async () => {
@@ -107,10 +111,10 @@ export default function ConvertQuoteDialog({
             }),
           ),
       };
-      const newDoc = await convertQuote(quote.id, body);
+      const newDoc = await convertDocument(src.id, body);
       onConverted(newDoc);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "No se pudo convertir la cotizacion.");
+      setError(err instanceof ApiError ? err.message : `No se pudo convertir la ${sourceLabel}.`);
     } finally {
       setSaving(false);
     }
@@ -119,9 +123,9 @@ export default function ConvertQuoteDialog({
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>
-        Convertir cotizacion en venta
+        Convertir {sourceLabel} en venta
         <Typography variant="body2" color="text.secondary">
-          Cotizacion #{quote.folio} · Total {formatCLP(quote.total_clp)}
+          {sourceLabel} #{src.folio} · Total {formatCLP(src.total_clp)}
         </Typography>
       </DialogTitle>
       <DialogContent>
@@ -236,7 +240,7 @@ export default function ConvertQuoteDialog({
           {payments.length > 0 && (
             <Stack direction="row" justifyContent="space-between" alignItems="center">
               <Typography variant="caption" color="text.secondary">
-                Pagado: {formatCLP(paymentsTotal)} de {formatCLP(quote.total_clp)}
+                Pagado: {formatCLP(paymentsTotal)} de {formatCLP(src.total_clp)}
               </Typography>
               {Math.abs(delta) <= 1 ? (
                 <Chip size="small" color="success" label="Cuadra" />

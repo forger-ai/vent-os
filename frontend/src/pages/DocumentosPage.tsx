@@ -36,6 +36,7 @@ const TYPE_LABEL: Record<DocumentType, string> = {
   nota_venta: "Nota de venta",
   nota_credito: "Nota de credito",
   cotizacion: "Cotizacion",
+  guia_despacho: "Guia de despacho",
 };
 
 const STATUS_COLOR: Record<DocumentStatus, "success" | "default" | "error"> = {
@@ -127,11 +128,14 @@ export default function DocumentosPage() {
                 ? "primary"
                 : p.row.document_type === "cotizacion"
                 ? "info"
+                : p.row.document_type === "guia_despacho"
+                ? "secondary"
                 : "default"
             }
             variant={
               p.row.document_type === "nota_credito" ||
-              p.row.document_type === "cotizacion"
+              p.row.document_type === "cotizacion" ||
+              p.row.document_type === "guia_despacho"
                 ? "filled"
                 : "outlined"
             }
@@ -250,6 +254,7 @@ export default function DocumentosPage() {
           <MenuItem value="nota_venta">Nota de venta</MenuItem>
           <MenuItem value="nota_credito">Nota de credito</MenuItem>
           <MenuItem value="cotizacion">Cotizacion</MenuItem>
+          <MenuItem value="guia_despacho">Guia de despacho</MenuItem>
         </TextField>
         <TextField
           select

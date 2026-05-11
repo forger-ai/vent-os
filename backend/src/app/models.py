@@ -67,6 +67,7 @@ class DocumentType(str, Enum):
     nota_venta = "nota_venta"
     nota_credito = "nota_credito"
     cotizacion = "cotizacion"
+    guia_despacho = "guia_despacho"
 
 
 class DocumentStatus(str, Enum):
@@ -305,8 +306,17 @@ class Document(SQLModel, table=True):
     converted_to_document_id: Optional[str] = Field(
         default=None,
         foreign_key="document.id",
-        description="Only for cotizacion: the sales document it was converted into.",
+        description=(
+            "Cotizacion: sales document it was converted into. "
+            "Guia despacho: invoice (boleta/factura) that billed it."
+        ),
     )
+    shipping_address: Optional[str] = Field(
+        default=None,
+        description="Direccion de entrega (principalmente para guia_despacho).",
+    )
+    shipping_notes: Optional[str] = None
+    carrier_name: Optional[str] = Field(default=None, max_length=120)
     status: DocumentStatus = Field(default=DocumentStatus.draft)
     subtotal_clp: Decimal = Field(default=Decimal("0"))
     iva_clp: Decimal = Field(default=Decimal("0"))

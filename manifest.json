@@ -1,8 +1,20 @@
 {
   "name": "vent-os",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "Local-first POS, sales, and inventory app for Chilean SMBs (Pymes). FastAPI backend, Vite + React frontend, SQLite storage.",
   "changelog": [
+    {
+      "version": "0.12.0",
+      "summary": "Guias de despacho con conversion posterior a factura/boleta.",
+      "changes": [
+        "Nuevo DocumentType.guia_despacho + campos shipping_address, shipping_notes, carrier_name en Document (migracion aditiva).",
+        "POS soporta tipo 'Guia de despacho': decrementa stock al emitir (como una venta normal) pero NO requiere pagos. Muestra inputs de direccion de entrega, transportista y notas de envio.",
+        "Endpoint POST /api/documents/{id}/convert (generico): convierte cotizacion o guia_despacho en boleta/factura/nota_venta. Para guia, skip_stock=True porque el stock ya salio.",
+        "ConvertDocumentDialog (renombrado, antes ConvertQuoteDialog) sirve para ambos tipos, detecta el origen y arma el copy adecuado.",
+        "Backend: emit_document permite payments vacios solo para guia_despacho; suma de pagos solo se valida cuando hay pagos.",
+        "Chip color secondary y filtro por tipo guia_despacho en la lista de documentos. Detalle muestra direccion/transportista/notas + boton 'Convertir a factura/boleta' si no esta convertida."
+      ]
+    },
     {
       "version": "0.11.0",
       "summary": "Cotizaciones (quotes) que se convierten a venta cuando son aceptadas.",

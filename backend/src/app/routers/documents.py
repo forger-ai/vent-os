@@ -16,9 +16,12 @@ from sqlmodel import Session, func, select
 from decimal import Decimal
 
 from app.billing import (
+    CheckoutPayment,
+    ConvertQuoteInput,
     CreditNoteInput,
     CreditNoteItem,
     cancel_document,
+    convert_to_sales_document,
     emit_credit_note,
 )
 from app.database import engine
@@ -246,3 +249,41 @@ def list_credit_notes_for(document_id: str) -> list[DocumentRow]:
             .order_by(Document.issued_at.desc(), Document.folio.desc())
         ).all()
         return [_to_row(session, n) for n in ncs]
+
+
+# ── Convert (guia o cotizacion -> venta) ─────────────────────────────────────
+
+
+class ConvertInputModel(BaseModel):
+    document_type: DocumentType
+    cash_session_id: Optional[str] = None
+    payments: list[dict] = []
+    notes: Optional[str] = None
+
+
+@router.post("/{document_id}/convert", response_model=DocumentOut, status_code=201)
+def convert_to_invoice(document_id: str, payload: ConvertInputModel) -> DocumentOut:
+    """Convierte una guia de despacho o una cotizacion en boleta/factura/nota_venta."""
+    from decimal import Decimal as _Decimal
+
+    with Session(engine) as session:
+        d = session.get(Document, document_id)
+        if d is None:
+            raise HTTPException(status_code=404, detail="Documento no encontrado")
+        ci = ConvertQuoteInput(
+            document_type=payload.document_type,
+            cash_session_id=payload.cash_session_id,
+            payments=[
+                CheckoutPayment(
+                    payment_method_id=p["payment_method_id"],
+                    amount_clp=_Decimal(str(p["amount_clp"])),
+                    reference=p.get("reference"),
+                )
+                for p in payload.payments
+            ],
+            notes=payload.notes,
+        )
+        new_doc = convert_to_sales_document(session, d, ci)
+        session.commit()
+        session.refresh(new_doc)
+        return _document_to_out(session, new_doc)

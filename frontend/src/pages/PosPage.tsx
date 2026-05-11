@@ -98,6 +98,9 @@ export default function PosPage() {
   const [globalDiscount, setGlobalDiscount] = useState<number>(0);
   const [notes, setNotes] = useState<string>("");
   const [validUntil, setValidUntil] = useState<string>("");
+  const [shippingAddress, setShippingAddress] = useState<string>("");
+  const [shippingNotes, setShippingNotes] = useState<string>("");
+  const [carrierName, setCarrierName] = useState<string>("");
 
   const [cart, setCart] = useState<CartLine[]>([]);
   const [searchText, setSearchText] = useState("");
@@ -253,6 +256,8 @@ export default function PosPage() {
 
   // ── Checkout ────────────────────────────────────────────────────────────────
   const isQuote = documentType === "cotizacion";
+  const isGuia = documentType === "guia_despacho";
+  const hidesPayments = isQuote || isGuia;
 
   const handleCheckout = async () => {
     setPosError(null);
@@ -264,11 +269,11 @@ export default function PosPage() {
       setPosError("Selecciona una bodega.");
       return;
     }
-    if (!isQuote && documentType === "factura" && (!customer || !customer.rut)) {
+    if (!hidesPayments && documentType === "factura" && (!customer || !customer.rut)) {
       setPosError("Factura requiere un cliente con RUT.");
       return;
     }
-    if (!isQuote && Math.abs(paymentDelta) > 1) {
+    if (!hidesPayments && Math.abs(paymentDelta) > 1) {
       setPosError(
         `Los pagos no cuadran con el total. Faltan ${formatCLP(Math.abs(paymentDelta))}.`,
       );
@@ -294,7 +299,11 @@ export default function PosPage() {
         setToast(`Cotizacion #${result.folio} creada`);
       } else {
         result = await posCheckout({
-          document_type: documentType as "boleta" | "factura" | "nota_venta",
+          document_type: documentType as
+            | "boleta"
+            | "factura"
+            | "nota_venta"
+            | "guia_despacho",
           warehouse_id: warehouseId,
           customer_id: customer?.id ?? null,
           price_list_id: priceListId || null,
@@ -305,21 +314,29 @@ export default function PosPage() {
             quantity: l.quantity,
             line_discount_clp: l.line_discount_clp || 0,
           })),
-          payments: payments
-            .filter((p) => p.payment_method_id && p.amount_clp > 0)
-            .map((p) => ({
-              payment_method_id: p.payment_method_id,
-              amount_clp: p.amount_clp,
-              reference: p.reference.trim() || null,
-            })),
+          payments: isGuia
+            ? []
+            : payments
+                .filter((p) => p.payment_method_id && p.amount_clp > 0)
+                .map((p) => ({
+                  payment_method_id: p.payment_method_id,
+                  amount_clp: p.amount_clp,
+                  reference: p.reference.trim() || null,
+                })),
+          shipping_address: isGuia ? shippingAddress.trim() || null : null,
+          shipping_notes: isGuia ? shippingNotes.trim() || null : null,
+          carrier_name: isGuia ? carrierName.trim() || null : null,
         });
-        setToast(`Emitido folio ${result.folio}`);
+        setToast(isGuia ? `Guia #${result.folio} emitida` : `Emitido folio ${result.folio}`);
       }
       setReceipt(result);
       setCart([]);
       setGlobalDiscount(0);
       setNotes("");
       setValidUntil("");
+      setShippingAddress("");
+      setShippingNotes("");
+      setCarrierName("");
       setPayments([]);
     } catch (err) {
       setPosError(err instanceof ApiError ? err.message : "No se pudo emitir el documento.");
@@ -423,6 +440,7 @@ export default function PosPage() {
           <MenuItem value="factura">Factura</MenuItem>
           <MenuItem value="nota_venta">Nota de venta</MenuItem>
           <MenuItem value="cotizacion">Cotizacion</MenuItem>
+          <MenuItem value="guia_despacho">Guia de despacho</MenuItem>
         </TextField>
         {isQuote && (
           <TextField
@@ -436,6 +454,32 @@ export default function PosPage() {
           />
         )}
       </Stack>
+
+      {isGuia && (
+        <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+          <TextField
+            label="Direccion de entrega"
+            size="small"
+            value={shippingAddress}
+            onChange={(e) => setShippingAddress(e.target.value)}
+            sx={{ minWidth: 280, flexGrow: 1 }}
+          />
+          <TextField
+            label="Transportista"
+            size="small"
+            value={carrierName}
+            onChange={(e) => setCarrierName(e.target.value)}
+            sx={{ minWidth: 180 }}
+          />
+          <TextField
+            label="Notas de envio"
+            size="small"
+            value={shippingNotes}
+            onChange={(e) => setShippingNotes(e.target.value)}
+            sx={{ minWidth: 240, flexGrow: 1 }}
+          />
+        </Stack>
+      )}
 
       <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ alignItems: "stretch" }}>
         {/* Buscador / Quick code */}
@@ -687,9 +731,9 @@ export default function PosPage() {
               </Typography>
             </Stack>
 
-            {!isQuote && <Divider sx={{ my: 2 }} />}
+            {!hidesPayments && <Divider sx={{ my: 2 }} />}
 
-            {!isQuote && <Stack spacing={1}>
+            {!hidesPayments && <Stack spacing={1}>
               <Stack direction="row" alignItems="center" justifyContent="space-between">
                 <Typography variant="subtitle2" fontWeight={600}>
                   Pagos
@@ -818,7 +862,7 @@ export default function PosPage() {
               disabled={cart.length === 0 || emitting}
               onClick={handleCheckout}
               sx={{ mt: 2 }}
-              color={isQuote ? "info" : "primary"}
+              color={isQuote ? "info" : isGuia ? "secondary" : "primary"}
             >
               {emitting
                 ? isQuote
@@ -826,6 +870,8 @@ export default function PosPage() {
                   : "Emitiendo..."
                 : isQuote
                 ? "Crear cotizacion"
+                : isGuia
+                ? "Emitir guia de despacho"
                 : `Emitir ${
                     documentType === "factura"
                       ? "factura"

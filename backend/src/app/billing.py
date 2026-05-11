@@ -80,6 +80,12 @@ class CheckoutInput:
     notes: Optional[str]
     items: list[CheckoutItem]
     payments: list[CheckoutPayment]
+    shipping_address: Optional[str] = None
+    shipping_notes: Optional[str] = None
+    carrier_name: Optional[str] = None
+    # Internal flag set during guia_despacho -> invoice conversion: stock
+    # already left when the guia was emitted, so we don't decrement again.
+    skip_stock: bool = False
 
 
 @dataclass
@@ -406,6 +412,9 @@ def emit_document(session: Session, payload: CheckoutInput) -> Document:
         total_clp=totals.total_clp,
         notes=(payload.notes or None),
         cash_session_id=resolved_session_id,
+        shipping_address=(payload.shipping_address or None),
+        shipping_notes=(payload.shipping_notes or None),
+        carrier_name=(payload.carrier_name or None),
     )
     session.add(document)
     session.flush()
@@ -424,12 +433,15 @@ def emit_document(session: Session, payload: CheckoutInput) -> Document:
                 line_total_clp=_round_clp(line.line_gross_clp),
             )
         )
-        fulfill_line(session, line, warehouse, document)
+        if not payload.skip_stock:
+            fulfill_line(session, line, warehouse, document)
 
-    # Persist payments. If none provided, default to the cash method for the
-    # entire total (backward-compatible).
+    # Persist payments. Guia de despacho is the one document type that may be
+    # emitted without payments — the bill comes later when it's converted to
+    # boleta/factura. Other types default to a single cash payment for the
+    # total when no payments are provided.
     payments = list(payload.payments) if payload.payments else []
-    if not payments:
+    if not payments and payload.document_type != DocumentType.guia_despacho:
         cash_pm = session.exec(
             select(PaymentMethod)
             .where(PaymentMethod.is_cash.is_(True))
@@ -470,12 +482,14 @@ def emit_document(session: Session, payload: CheckoutInput) -> Document:
             )
         )
 
-    # Allow at most $1 rounding tolerance.
-    if abs(total_paid - totals.total_clp) > Decimal("1"):
-        raise HTTPException(
-            status_code=400,
-            detail=f"La suma de pagos ({total_paid}) no cuadra con el total del documento ({totals.total_clp}).",
-        )
+    # Allow at most $1 rounding tolerance. Guia de despacho without payments
+    # is intentionally unbilled — skip the check.
+    if payments:
+        if abs(total_paid - totals.total_clp) > Decimal("1"):
+            raise HTTPException(
+                status_code=400,
+                detail=f"La suma de pagos ({total_paid}) no cuadra con el total del documento ({totals.total_clp}).",
+            )
 
     return document
 
@@ -570,23 +584,39 @@ class ConvertQuoteInput:
     notes: Optional[str]
 
 
-def convert_quote_to_sale(
-    session: Session, quote: Document, payload: ConvertQuoteInput
+CONVERTIBLE_SOURCES = (DocumentType.cotizacion, DocumentType.guia_despacho)
+
+
+def convert_to_sales_document(
+    session: Session, source: Document, payload: ConvertQuoteInput
 ) -> Document:
-    """Convierte una cotizacion en un documento de venta. Crea un nuevo
-    documento del tipo elegido, decrementa stock, captura pagos, y vincula
-    la cotizacion original via converted_to_document_id."""
-    if quote.document_type != DocumentType.cotizacion:
-        raise HTTPException(status_code=400, detail="Solo se pueden convertir cotizaciones.")
-    if quote.status != DocumentStatus.issued:
+    """Convierte una cotizacion o guia de despacho en un documento de venta
+    fiscal (boleta/factura/nota_venta).
+
+    - Si source es cotizacion: stock se decrementa en la conversion (en la
+      cotizacion no se movio).
+    - Si source es guia_despacho: stock ya salio al emitir la guia, asi que
+      la conversion NO decrementa stock (skip_stock=True).
+
+    En ambos casos:
+    - Captura pagos en el nuevo documento (si los hay).
+    - Vincula source.converted_to_document_id al nuevo documento.
+    """
+    if source.document_type not in CONVERTIBLE_SOURCES:
         raise HTTPException(
             status_code=400,
-            detail=f"La cotizacion no esta abierta (estado: {quote.status.value}).",
+            detail="Solo se pueden convertir cotizaciones o guias de despacho.",
         )
-    if quote.converted_to_document_id is not None:
+    label = "cotizacion" if source.document_type == DocumentType.cotizacion else "guia"
+    if source.status != DocumentStatus.issued:
         raise HTTPException(
             status_code=400,
-            detail="La cotizacion ya fue convertida.",
+            detail=f"La {label} no esta abierta (estado: {source.status.value}).",
+        )
+    if source.converted_to_document_id is not None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"La {label} ya fue convertida.",
         )
     if payload.document_type not in (
         DocumentType.boleta,
@@ -598,41 +628,47 @@ def convert_quote_to_sale(
             detail="El tipo de destino debe ser boleta, factura o nota_venta.",
         )
 
-    # Re-emit as a normal sales document using the quote's items.
-    quote_items = session.exec(
-        select(DocumentItem).where(DocumentItem.document_id == quote.id)
+    source_items = session.exec(
+        select(DocumentItem).where(DocumentItem.document_id == source.id)
     ).all()
-    if not quote_items:
-        raise HTTPException(status_code=400, detail="La cotizacion no tiene items.")
+    if not source_items:
+        raise HTTPException(status_code=400, detail=f"La {label} no tiene items.")
+
+    skip_stock = source.document_type == DocumentType.guia_despacho
+    default_note = f"Convertido desde {label} #{source.folio}"
 
     checkout = CheckoutInput(
         document_type=payload.document_type,
-        warehouse_id=quote.warehouse_id or "",
-        customer_id=quote.customer_id,
+        warehouse_id=source.warehouse_id or "",
+        customer_id=source.customer_id,
         price_list_id=None,
         cash_session_id=payload.cash_session_id,
         global_discount_clp=DEC_ZERO,
-        notes=(payload.notes or f"Convertido desde cotizacion #{quote.folio}"),
+        notes=(payload.notes or default_note),
         items=[
             CheckoutItem(
                 variant_id=it.variant_id or "",
                 quantity=it.quantity,
-                # Use the price snapshot from the quote so conversion is faithful.
                 unit_price_override_clp=it.unit_price_clp,
                 line_discount_clp=it.discount_clp,
             )
-            for it in quote_items
+            for it in source_items
             if it.variant_id
         ],
         payments=payload.payments,
+        skip_stock=skip_stock,
     )
     new_doc = emit_document(session, checkout)
 
-    quote.converted_to_document_id = new_doc.id
-    quote.updated_at = datetime.now(timezone.utc)
-    session.add(quote)
+    source.converted_to_document_id = new_doc.id
+    source.updated_at = datetime.now(timezone.utc)
+    session.add(source)
 
     return new_doc
+
+
+# Backwards-compat alias for the quotes router.
+convert_quote_to_sale = convert_to_sales_document
 
 
 # ── Credit note (nota de credito) ────────────────────────────────────────────

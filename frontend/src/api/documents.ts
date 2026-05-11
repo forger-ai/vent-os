@@ -73,3 +73,13 @@ export const createCreditNote = (documentId: string, body: CreditNoteInput) =>
 
 export const listCreditNotesFor = (documentId: string) =>
   get<DocumentRow[]>(`/api/documents/${documentId}/credit-notes`);
+
+export interface ConvertDocumentInput {
+  document_type: DocumentType;
+  cash_session_id?: string | null;
+  payments: { payment_method_id: string; amount_clp: number; reference?: string | null }[];
+  notes?: string | null;
+}
+
+export const convertDocument = (documentId: string, body: ConvertDocumentInput) =>
+  post<DocumentOut>(`/api/documents/${documentId}/convert`, body);

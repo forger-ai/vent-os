@@ -30,7 +30,7 @@ import {
 } from "../../api/documents";
 import { cancelQuote } from "../../api/quotes";
 import { formatCLP, formatQty } from "../../util/format";
-import ConvertQuoteDialog from "./ConvertQuoteDialog";
+import ConvertDocumentDialog from "./ConvertDocumentDialog";
 import CreditNoteDialog from "./CreditNoteDialog";
 
 interface DocumentDetailDrawerProps {
@@ -45,6 +45,8 @@ const TYPE_LABEL: Record<string, string> = {
   factura: "Factura",
   nota_venta: "Nota de venta",
   nota_credito: "Nota de credito",
+  cotizacion: "Cotizacion",
+  guia_despacho: "Guia de despacho",
 };
 
 const STATUS_COLOR: Record<string, "success" | "default" | "error"> = {
@@ -252,10 +254,36 @@ export default function DocumentDetailDrawer({
                 )}
                 {doc.converted_to_folio && (
                   <Typography variant="caption" color="success.main">
-                    Convertida en {TYPE_LABEL[doc.converted_to_type ?? ""] ?? doc.converted_to_type} #{doc.converted_to_folio}
+                    Convertido en {TYPE_LABEL[doc.converted_to_type ?? ""] ?? doc.converted_to_type} #{doc.converted_to_folio}
                   </Typography>
                 )}
               </Stack>
+
+              {doc.document_type === "guia_despacho" && (doc.shipping_address || doc.carrier_name || doc.shipping_notes) && (
+                <>
+                  <Divider />
+                  <Stack spacing={0.5}>
+                    <Typography variant="caption" color="text.secondary">
+                      Datos de envio
+                    </Typography>
+                    {doc.shipping_address && (
+                      <Typography variant="body2">
+                        <strong>Direccion:</strong> {doc.shipping_address}
+                      </Typography>
+                    )}
+                    {doc.carrier_name && (
+                      <Typography variant="body2">
+                        <strong>Transportista:</strong> {doc.carrier_name}
+                      </Typography>
+                    )}
+                    {doc.shipping_notes && (
+                      <Typography variant="body2">
+                        <strong>Notas:</strong> {doc.shipping_notes}
+                      </Typography>
+                    )}
+                  </Stack>
+                </>
+              )}
 
               {childNCs.length > 0 && (
                 <>
@@ -340,46 +368,53 @@ export default function DocumentDetailDrawer({
             <Divider />
             <Box sx={{ p: 2 }}>
               <Stack spacing={1}>
-                {doc.document_type === "cotizacion" && !doc.converted_to_document_id && (
-                  <>
-                    <Button
-                      variant="contained"
-                      color="success"
-                      fullWidth
-                      startIcon={<CheckIcon />}
-                      onClick={() => setConvertOpen(true)}
-                    >
-                      Convertir en venta
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      fullWidth
-                      startIcon={<BlockIcon />}
-                      onClick={async () => {
-                        if (!confirm("Descartar esta cotizacion?")) return;
-                        setCancelling(true);
-                        try {
-                          const updated = await cancelQuote(doc.id);
-                          setDoc(updated);
-                          onChanged();
-                        } catch (err) {
-                          setError(
-                            err instanceof ApiError
-                              ? err.message
-                              : "No se pudo descartar.",
-                          );
-                        } finally {
-                          setCancelling(false);
-                        }
-                      }}
-                      disabled={cancelling}
-                    >
-                      Descartar cotizacion
-                    </Button>
-                  </>
-                )}
+                {(doc.document_type === "cotizacion" ||
+                  doc.document_type === "guia_despacho") &&
+                  !doc.converted_to_document_id && (
+                    <>
+                      <Button
+                        variant="contained"
+                        color="success"
+                        fullWidth
+                        startIcon={<CheckIcon />}
+                        onClick={() => setConvertOpen(true)}
+                      >
+                        {doc.document_type === "cotizacion"
+                          ? "Convertir en venta"
+                          : "Convertir a factura/boleta"}
+                      </Button>
+                      {doc.document_type === "cotizacion" && (
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          fullWidth
+                          startIcon={<BlockIcon />}
+                          onClick={async () => {
+                            if (!confirm("Descartar esta cotizacion?")) return;
+                            setCancelling(true);
+                            try {
+                              const updated = await cancelQuote(doc.id);
+                              setDoc(updated);
+                              onChanged();
+                            } catch (err) {
+                              setError(
+                                err instanceof ApiError
+                                  ? err.message
+                                  : "No se pudo descartar.",
+                              );
+                            } finally {
+                              setCancelling(false);
+                            }
+                          }}
+                          disabled={cancelling}
+                        >
+                          Descartar cotizacion
+                        </Button>
+                      )}
+                    </>
+                  )}
                 {doc.document_type !== "cotizacion" &&
+                  doc.document_type !== "guia_despacho" &&
                   doc.document_type !== "nota_credito" && (
                     <Button
                       variant="contained"
@@ -430,9 +465,9 @@ export default function DocumentDetailDrawer({
       )}
 
       {doc && (
-        <ConvertQuoteDialog
+        <ConvertDocumentDialog
           open={convertOpen}
-          quote={doc}
+          document={doc}
           onClose={() => setConvertOpen(false)}
           onConverted={() => {
             setConvertOpen(false);

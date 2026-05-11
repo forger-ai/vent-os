@@ -226,6 +226,11 @@ def run_pre_create_migrations() -> MigrationContext:
     _add_column_if_missing("document", "valid_until", "DATE")
     _add_column_if_missing("document", "converted_to_document_id", "VARCHAR")
 
+    # v0.12: guia de despacho — campos opcionales de envio
+    _add_column_if_missing("document", "shipping_address", "VARCHAR")
+    _add_column_if_missing("document", "shipping_notes", "VARCHAR")
+    _add_column_if_missing("document", "carrier_name", "VARCHAR")
+
     return context
 
 

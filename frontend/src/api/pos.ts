@@ -5,7 +5,8 @@ export type DocumentType =
   | "factura"
   | "nota_venta"
   | "nota_credito"
-  | "cotizacion";
+  | "cotizacion"
+  | "guia_despacho";
 
 export interface TaxCodeBrief {
   id: string;
@@ -54,6 +55,9 @@ export interface CheckoutInput {
   notes?: string | null;
   items: CheckoutItemInput[];
   payments?: CheckoutPaymentInput[];
+  shipping_address?: string | null;
+  shipping_notes?: string | null;
+  carrier_name?: string | null;
 }
 
 export interface DocumentItemOut {
@@ -99,6 +103,9 @@ export interface DocumentOut {
   converted_to_document_id: string | null;
   converted_to_folio: number | null;
   converted_to_type: DocumentType | null;
+  shipping_address: string | null;
+  shipping_notes: string | null;
+  carrier_name: string | null;
   subtotal_clp: number;
   iva_clp: number;
   total_clp: number;

@@ -233,6 +233,9 @@ class CheckoutInputModel(BaseModel):
     notes: Optional[str] = None
     items: list[CheckoutItemInput]
     payments: list[CheckoutPaymentInput] = Field(default_factory=list)
+    shipping_address: Optional[str] = None
+    shipping_notes: Optional[str] = None
+    carrier_name: Optional[str] = None
 
 
 class DocumentItemOut(BaseModel):
@@ -278,6 +281,9 @@ class DocumentOut(BaseModel):
     converted_to_document_id: Optional[str]
     converted_to_folio: Optional[int]
     converted_to_type: Optional[DocumentType]
+    shipping_address: Optional[str]
+    shipping_notes: Optional[str]
+    carrier_name: Optional[str]
     subtotal_clp: float
     iva_clp: float
     total_clp: float
@@ -377,6 +383,9 @@ def _document_to_out(session: Session, document: Document) -> DocumentOut:
         converted_to_document_id=document.converted_to_document_id,
         converted_to_folio=converted_folio,
         converted_to_type=converted_type,
+        shipping_address=document.shipping_address,
+        shipping_notes=document.shipping_notes,
+        carrier_name=document.carrier_name,
         subtotal_clp=float(document.subtotal_clp),
         iva_clp=float(document.iva_clp),
         total_clp=float(document.total_clp),
@@ -442,6 +451,9 @@ def checkout(payload: CheckoutInputModel) -> DocumentOut:
                 )
                 for p in payload.payments
             ],
+            shipping_address=payload.shipping_address,
+            shipping_notes=payload.shipping_notes,
+            carrier_name=payload.carrier_name,
         )
         document = emit_document(session, ci)
         session.commit()

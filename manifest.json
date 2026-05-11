@@ -1,8 +1,20 @@
 {
   "name": "vent-os",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Local-first POS, sales, and inventory app for Chilean SMBs (Pymes). FastAPI backend, Vite + React frontend, SQLite storage.",
   "changelog": [
+    {
+      "version": "0.7.0",
+      "summary": "Punto de venta funcional + emision de boletas, facturas y notas de venta + clientes.",
+      "changes": [
+        "POS: carrito con quick-lookup por SKU/codigo de barras, busqueda en vivo, edicion de cantidades y descuentos por linea, descuento global, notas. Calculo en vivo de neto, IVA (19%) e impuestos adicionales por variante.",
+        "Emision de documentos: POST /api/pos/checkout crea Document + DocumentItems + StockMovements atomicamente y decrementa stock. Folio interno autoasignado por tipo de documento.",
+        "Productos con tracks_batches: stock se descuenta FIFO por lote (oldest expiry first), con un StockMovement por lote consumido.",
+        "Documentos: lista paginada con filtros (tipo, estado, bodega, fecha, busqueda por folio/cliente/RUT), detalle con items, accion 'anular' que revierte stock atomicamente.",
+        "Clientes: CRUD completo con normalizacion de RUT chileno (77.123.456-5 -> 77123456-5). Factura requiere cliente con RUT.",
+        "Recibo imprimible (window.print) tras emitir el documento."
+      ]
+    },
     {
       "version": "0.6.0",
       "summary": "Operaciones de inventario: transferencias, conteo fisico y valorizacion.",

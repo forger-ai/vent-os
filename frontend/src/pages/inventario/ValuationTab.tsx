@@ -47,7 +47,7 @@ export default function ValuationTab() {
       });
       setReport(r);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "No se pudo calcular la valorizacion.");
+      setError(err instanceof ApiError ? err.message : "No se pudo calcular la valorización.");
     } finally {
       setLoading(false);
     }
@@ -120,7 +120,7 @@ export default function ValuationTab() {
                     {report.total_variants_without_cost}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    Cargales cost_clp para incluirlas en la valorizacion al costo.
+                    Cárgales cost_clp para incluirlas en la valorización al costo.
                   </Typography>
                 </CardContent>
               </Card>
@@ -171,12 +171,12 @@ export default function ValuationTab() {
             <Card sx={{ flex: 1 }}>
               <CardContent>
                 <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                  Por categoria
+                  Por categoría
                 </Typography>
                 <Table size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell>Categoria</TableCell>
+                      <TableCell>Categoría</TableCell>
                       <TableCell align="right">Unidades</TableCell>
                       <TableCell align="right">Valor</TableCell>
                     </TableRow>
@@ -214,7 +214,7 @@ export default function ValuationTab() {
                   <TableHead>
                     <TableRow>
                       <TableCell>Variante</TableCell>
-                      <TableCell>Categoria</TableCell>
+                      <TableCell>Categoría</TableCell>
                       <TableCell align="right">Unidades</TableCell>
                       <TableCell align="right">
                         {mode === "cost" ? "Costo unit." : "Precio unit."}

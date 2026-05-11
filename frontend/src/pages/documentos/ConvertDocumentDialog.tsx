@@ -59,7 +59,7 @@ export default function ConvertDocumentDialog({
     setError(null);
     setTargetType("boleta");
     const label =
-      src.document_type === "cotizacion" ? "cotizacion" : "guia de despacho";
+      src.document_type === "cotizacion" ? "cotización" : "guía de despacho";
     setNotes(`Convertido desde ${label} #${src.folio}`);
     listPaymentMethods(false)
       .then((pms) => {
@@ -76,7 +76,7 @@ export default function ConvertDocumentDialog({
 
   if (!src) return null;
   const sourceLabel =
-    src.document_type === "cotizacion" ? "cotizacion" : "guia de despacho";
+    src.document_type === "cotizacion" ? "cotización" : "guía de despacho";
 
   const paymentsTotal = payments.reduce(
     (acc, p) => acc + (Number(p.amount_clp) || 0),
@@ -178,7 +178,7 @@ export default function ConvertDocumentDialog({
               <TextField
                 select
                 size="small"
-                label="Metodo"
+                label="Método"
                 value={p.payment_method_id}
                 onChange={(e) =>
                   setPayments((prev) =>

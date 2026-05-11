@@ -141,7 +141,7 @@ export default function MovimientosTab() {
       },
       {
         field: "qty_after",
-        headerName: "Stock despues",
+        headerName: "Stock después",
         width: 130,
         align: "right",
         headerAlign: "right",

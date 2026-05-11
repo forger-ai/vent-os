@@ -46,9 +46,9 @@ const TYPE_LABEL: Record<string, string> = {
   boleta: "Boleta",
   factura: "Factura",
   nota_venta: "Nota de venta",
-  nota_credito: "Nota de credito",
-  cotizacion: "Cotizacion",
-  guia_despacho: "Guia de despacho",
+  nota_credito: "Nota de crédito",
+  cotizacion: "Cotización",
+  guia_despacho: "Guía de despacho",
 };
 
 const STATUS_COLOR: Record<string, "success" | "default" | "error"> = {
@@ -288,7 +288,7 @@ export default function DocumentDetailDrawer({
                     </Typography>
                     {doc.shipping_address && (
                       <Typography variant="body2">
-                        <strong>Direccion:</strong> {doc.shipping_address}
+                        <strong>Dirección:</strong> {doc.shipping_address}
                       </Typography>
                     )}
                     {doc.carrier_name && (
@@ -310,7 +310,7 @@ export default function DocumentDetailDrawer({
                   <Divider />
                   <Stack spacing={0.5}>
                     <Typography variant="caption" color="text.secondary">
-                      Notas de credito emitidas sobre este documento
+                      Notas de crédito emitidas sobre este documento
                     </Typography>
                     {childNCs.map((nc) => (
                       <Stack
@@ -410,7 +410,7 @@ export default function DocumentDetailDrawer({
                           fullWidth
                           startIcon={<BlockIcon />}
                           onClick={async () => {
-                            if (!confirm("Descartar esta cotizacion?")) return;
+                            if (!confirm("Descartar esta cotización?")) return;
                             setCancelling(true);
                             try {
                               const updated = await cancelQuote(doc.id);
@@ -428,7 +428,7 @@ export default function DocumentDetailDrawer({
                           }}
                           disabled={cancelling}
                         >
-                          Descartar cotizacion
+                          Descartar cotización
                         </Button>
                       )}
                     </>
@@ -458,7 +458,7 @@ export default function DocumentDetailDrawer({
                       onClick={() => setCreditOpen(true)}
                       disabled={cancelling}
                     >
-                      Emitir nota de credito (devolucion)
+                      Emitir nota de crédito (devolución)
                     </Button>
                   )}
                 {doc.document_type !== "cotizacion" && (
@@ -470,13 +470,13 @@ export default function DocumentDetailDrawer({
                     disabled={cancelling}
                     onClick={handleCancel}
                   >
-                    {cancelling ? "Anulando..." : "Anular documento (rapido)"}
+                    {cancelling ? "Anulando..." : "Anular documento (rápido)"}
                   </Button>
                 )}
                 {doc.document_type !== "cotizacion" && (
                   <Typography variant="caption" color="text.secondary" textAlign="center">
-                    Anular: error operativo, revierte todo. Nota de credito:
-                    devolucion parcial/total, deja el documento original como historico.
+                    Anular: error operativo, revierte todo. Nota de crédito:
+                    devolución parcial/total, deja el documento original como histórico.
                   </Typography>
                 )}
               </Stack>

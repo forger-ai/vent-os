@@ -104,8 +104,7 @@ export default function HomePage() {
             Inicio
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Resumen de ventas del dia/semana/mes, sesiones de caja abiertas,
-            documentos pendientes y alertas de stock.
+            Resumen de ventas, caja, cuentas por cobrar y alertas operativas.
           </Typography>
         </Box>
         <Stack direction="row" spacing={1} alignItems="center">
@@ -115,7 +114,7 @@ export default function HomePage() {
             value={warehouses.find((w) => w.id === warehouseId) ?? null}
             onChange={(_, v) => setWarehouseId(v?.id ?? null)}
             renderInput={(p) => (
-              <TextField {...p} label="Bodega (todas si vacio)" size="small" />
+              <TextField {...p} label="Filtrar por bodega" size="small" placeholder="Todas" />
             )}
             sx={{ minWidth: 240 }}
           />
@@ -178,7 +177,7 @@ export default function HomePage() {
                   <Stack direction="row" spacing={1} alignItems="center">
                     <LocalShippingIcon color="secondary" />
                     <Typography variant="overline" color="text.secondary">
-                      Guias sin facturar
+                      Guías sin facturar
                     </Typography>
                   </Stack>
                   <Typography variant="h4" fontWeight={700}>
@@ -340,7 +339,7 @@ export default function HomePage() {
                         <TableRow>
                           <TableCell colSpan={3} align="center">
                             <Typography variant="caption" color="text.secondary">
-                              Sin ventas este mes todavia.
+                              Sin ventas este mes todavía.
                             </Typography>
                           </TableCell>
                         </TableRow>
@@ -367,12 +366,12 @@ export default function HomePage() {
               <Card>
                 <CardContent>
                   <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-                    Pagos del mes por metodo
+                    Pagos del mes por método
                   </Typography>
                   <Table size="small">
                     <TableHead>
                       <TableRow>
-                        <TableCell>Metodo</TableCell>
+                        <TableCell>Método</TableCell>
                         <TableCell align="right">Monto</TableCell>
                       </TableRow>
                     </TableHead>
@@ -422,7 +421,7 @@ export default function HomePage() {
                       <TableRow>
                         <TableCell>Variante</TableCell>
                         <TableCell align="right">Stock</TableCell>
-                        <TableCell align="right">Minimo</TableCell>
+                        <TableCell align="right">Mínimo</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -463,7 +462,7 @@ export default function HomePage() {
               <Card>
                 <CardContent>
                   <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-                    Lotes proximos a vencer
+                    Lotes próximos a vencer
                   </Typography>
                   <Table size="small">
                     <TableHead>
@@ -471,7 +470,7 @@ export default function HomePage() {
                         <TableCell>Lote</TableCell>
                         <TableCell>Bodega</TableCell>
                         <TableCell align="right">Stock</TableCell>
-                        <TableCell align="right">Dias</TableCell>
+                        <TableCell align="right">Días</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -479,7 +478,7 @@ export default function HomePage() {
                         <TableRow>
                           <TableCell colSpan={4} align="center">
                             <Typography variant="caption" color="success.main">
-                              Sin lotes proximos a vencer.
+                              Sin lotes próximos a vencer.
                             </Typography>
                           </TableCell>
                         </TableRow>

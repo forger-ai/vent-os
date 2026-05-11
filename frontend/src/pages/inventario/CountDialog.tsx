@@ -165,8 +165,8 @@ export default function CountDialog({ open, onClose, onApplied }: CountDialogPro
 
           <Typography variant="caption" color="text.secondary">
             {filledCount} variantes con cantidad ingresada · {diffCount} con
-            diferencia respecto al sistema. Las variantes vacias se ignoran. Los
-            productos con lotes no aparecen aqui (ajustalos desde la pestana Lotes).
+            diferencia respecto al sistema. Las variantes vacías se ignoran. Los
+            productos con lotes no aparecen aquí (ajústalos desde la pestaña Lotes).
           </Typography>
 
           {report && (

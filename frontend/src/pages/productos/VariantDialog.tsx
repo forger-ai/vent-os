@@ -207,7 +207,7 @@ export default function VariantDialog({
             </Grid>
             <Grid item xs={12} sm={4}>
               <TextField
-                label="Codigo de barras"
+                label="Código de barras"
                 fullWidth
                 value={form.barcode}
                 onChange={(e) => setField("barcode", e.target.value)}
@@ -231,7 +231,7 @@ export default function VariantDialog({
                 fullWidth
                 value={form.display_name}
                 onChange={(e) => setField("display_name", e.target.value)}
-                helperText="Si lo dejas vacio se arma desde el producto + atributos"
+                helperText="Si lo dejas vacío se arma desde el producto + atributos"
               />
             </Grid>
 
@@ -260,7 +260,7 @@ export default function VariantDialog({
             </Grid>
             <Grid item xs={12} sm={4}>
               <TextField
-                label="Stock minimo"
+                label="Stock mínimo"
                 type="number"
                 fullWidth
                 value={form.stock_min}
@@ -278,7 +278,7 @@ export default function VariantDialog({
             {availableTaxCodes.length === 0 ? (
               <Typography variant="caption" color="text.secondary">
                 Sin codigos de impuestos configurados. Crea uno desde la pestana
-                Configuracion - Impuestos.
+                Configuración → Impuestos.
               </Typography>
             ) : (
               <Autocomplete
@@ -291,7 +291,7 @@ export default function VariantDialog({
                 renderInput={(p) => (
                   <TextField
                     {...p}
-                    label="Codigos aplicables (ILA, especificos, ...)"
+                    label="Códigos aplicables (ILA, específicos, ...)"
                     placeholder="Selecciona uno o varios"
                   />
                 )}
@@ -310,7 +310,7 @@ export default function VariantDialog({
             </Stack>
             {form.attributes.length === 0 && (
               <Typography variant="body2" color="text.secondary">
-                Sin atributos. Si el producto tiene una sola version, dejalo asi.
+                Sin atributos. Si el producto tiene una sola versión, déjalo así.
               </Typography>
             )}
             {form.attributes.map((attr, idx) => (

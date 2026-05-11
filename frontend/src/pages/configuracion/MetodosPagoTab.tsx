@@ -42,7 +42,7 @@ export default function MetodosPagoTab() {
     try {
       setRows(await listPaymentMethods(showInactive));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "No se pudieron cargar los metodos.");
+      setError(err instanceof ApiError ? err.message : "No se pudieron cargar los métodos.");
     } finally {
       setLoading(false);
     }
@@ -55,12 +55,12 @@ export default function MetodosPagoTab() {
   const handleSaved = (row: PaymentMethodRow) => {
     setDialogOpen(false);
     setEditing(null);
-    setToast(`Metodo ${row.code} guardado.`);
+    setToast(`Método ${row.code} guardado.`);
     load();
   };
 
   const handleDeactivate = async (r: PaymentMethodRow) => {
-    if (!confirm(`Desactivar metodo ${r.code}?`)) return;
+    if (!confirm(`Desactivar método ${r.code}?`)) return;
     try {
       await deactivatePaymentMethod(r.id);
       setToast(`${r.code} desactivado.`);
@@ -74,7 +74,7 @@ export default function MetodosPagoTab() {
     <Stack spacing={2}>
       <Stack direction="row" justifyContent="space-between" alignItems="center">
         <Typography variant="body2" color="text.secondary">
-          Metodos de pago aceptados en el POS. Los marcados como "efectivo" cuentan
+          Métodos de pago aceptados en el POS. Los marcados como "efectivo" cuentan
           en el cierre de caja; los demas no afectan el cajon.
         </Typography>
         <Stack direction="row" spacing={1} alignItems="center">
@@ -103,7 +103,7 @@ export default function MetodosPagoTab() {
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell>Codigo</TableCell>
+              <TableCell>Código</TableCell>
               <TableCell>Nombre</TableCell>
               <TableCell>Tipo</TableCell>
               <TableCell align="right">Orden</TableCell>
@@ -122,7 +122,7 @@ export default function MetodosPagoTab() {
                   {r.is_cash ? (
                     <Chip size="small" color="success" label="Efectivo" />
                   ) : (
-                    <Chip size="small" label="Electronico" variant="outlined" />
+                    <Chip size="small" label="Electrónico" variant="outlined" />
                   )}
                 </TableCell>
                 <TableCell align="right">{r.sort_order}</TableCell>
@@ -161,7 +161,7 @@ export default function MetodosPagoTab() {
               <TableRow>
                 <TableCell colSpan={6} align="center">
                   <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
-                    Sin metodos. Crea el primero.
+                    Sin métodos. Crea el primero.
                   </Typography>
                 </TableCell>
               </TableRow>

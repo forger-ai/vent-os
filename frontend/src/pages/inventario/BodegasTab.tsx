@@ -76,8 +76,8 @@ export default function BodegasTab() {
     <Stack spacing={2}>
       <Stack direction="row" justifyContent="space-between" alignItems="center">
         <Typography variant="body2" color="text.secondary">
-          Cada bodega mantiene su propio stock por variante. La que esta marcada como
-          default es la que recibe ajustes por defecto.
+          Cada bodega mantiene su propio stock por variante. La marcada como
+          predeterminada recibe ajustes por defecto.
         </Typography>
         <Stack direction="row" spacing={1} alignItems="center">
           <Switch
@@ -105,9 +105,9 @@ export default function BodegasTab() {
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell width={100}>Codigo</TableCell>
+              <TableCell width={100}>Código</TableCell>
               <TableCell>Nombre</TableCell>
-              <TableCell>Direccion</TableCell>
+              <TableCell>Dirección</TableCell>
               <TableCell align="right">Variantes con stock</TableCell>
               <TableCell width={60}></TableCell>
               <TableCell width={100}></TableCell>

@@ -146,7 +146,7 @@ export default function CreditNoteDialog({
       });
       onCreated(nc);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "No se pudo crear la nota de credito.");
+      setError(err instanceof ApiError ? err.message : "No se pudo crear la nota de crédito.");
     } finally {
       setSaving(false);
     }
@@ -155,7 +155,7 @@ export default function CreditNoteDialog({
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
-        Nota de credito
+        Nota de crédito
         <Typography variant="body2" color="text.secondary">
           Sobre {doc.document_type === "boleta" ? "Boleta" : doc.document_type === "factura" ? "Factura" : "Nota de venta"} #{doc.folio}
         </Typography>
@@ -166,7 +166,7 @@ export default function CreditNoteDialog({
 
           {previousNCs.length > 0 && (
             <Alert severity="info" variant="outlined">
-              Ya existen {previousNCs.length} nota(s) de credito sobre este documento.
+              Ya existen {previousNCs.length} nota(s) de crédito sobre este documento.
               El backend valida que no excedas las cantidades restantes.
             </Alert>
           )}
@@ -176,7 +176,7 @@ export default function CreditNoteDialog({
               Items a devolver
             </Typography>
             <Button size="small" onClick={setAllMax}>
-              Marcar todo (devolucion total)
+              Marcar todo (devolución total)
             </Button>
           </Stack>
 
@@ -268,7 +268,7 @@ export default function CreditNoteDialog({
           onClick={handleSubmit}
           disabled={saving || !anyToReturn || !allLinesValid}
         >
-          {saving ? "Emitiendo..." : "Emitir nota de credito"}
+          {saving ? "Emitiendo..." : "Emitir nota de crédito"}
         </Button>
       </DialogActions>
     </Dialog>

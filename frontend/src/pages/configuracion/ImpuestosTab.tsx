@@ -107,7 +107,7 @@ export default function ImpuestosTab() {
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell>Codigo</TableCell>
+              <TableCell>Código</TableCell>
               <TableCell>Nombre</TableCell>
               <TableCell align="right">Tasa</TableCell>
               <TableCell align="right">Variantes asignadas</TableCell>

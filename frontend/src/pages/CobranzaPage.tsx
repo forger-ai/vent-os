@@ -148,7 +148,7 @@ export default function CobranzaPage() {
         renderCell: (p) => (
           <Chip
             size="small"
-            label={`${p.row.document_type === "factura" ? "Factura" : p.row.document_type === "boleta" ? "Boleta" : p.row.document_type === "nota_venta" ? "N. venta" : "Guia"} #${p.row.folio}`}
+            label={`${p.row.document_type === "factura" ? "Factura" : p.row.document_type === "boleta" ? "Boleta" : p.row.document_type === "nota_venta" ? "N. venta" : "Guía"} #${p.row.folio}`}
             variant="outlined"
           />
         ),
@@ -237,7 +237,7 @@ export default function CobranzaPage() {
             Cobranza
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Documentos con saldo pendiente: facturas, notas de venta y guias.
+            Documentos con saldo pendiente: facturas, notas de venta y guías.
             Ordenadas por vencimiento; las vencidas primero.
           </Typography>
         </Box>
@@ -284,7 +284,7 @@ export default function CobranzaPage() {
           <Card sx={{ flex: 1 }}>
             <CardContent>
               <Typography variant="overline" color="warning.main">
-                Vence en 7 dias
+                Vence en 7 días
               </Typography>
               <Typography variant="h5" fontWeight={700}>
                 {formatCLP(stats.due_within_7_clp)}
@@ -294,7 +294,7 @@ export default function CobranzaPage() {
           <Card sx={{ flex: 1 }}>
             <CardContent>
               <Typography variant="overline" color="text.secondary">
-                Vence en 30 dias
+                Vence en 30 días
               </Typography>
               <Typography variant="h5" fontWeight={700}>
                 {formatCLP(stats.due_within_30_clp)}

@@ -85,7 +85,7 @@ export default function BatchDialog({
   const handleSubmit = async () => {
     setError(null);
     if (!lotNumber.trim()) {
-      setError("El numero de lote es obligatorio.");
+      setError("El número de lote es obligatorio.");
       return;
     }
     if (!editing && !warehouseId) {
@@ -194,8 +194,8 @@ export default function BatchDialog({
           </Grid>
           {editing && (
             <Alert severity="info" variant="outlined">
-              Para cambiar la cantidad de un lote, usa "Ajustar stock" desde la pestana
-              Stock (asi queda registrado el movimiento).
+              Para cambiar la cantidad de un lote, usa "Ajustar stock" desde la pestaña
+              Stock (así queda registrado el movimiento).
             </Alert>
           )}
         </Stack>

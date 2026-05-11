@@ -84,7 +84,7 @@ export default function LotesTab() {
       const list = await listExpiringBatches(withinDays);
       setExpiring(list);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "No se pudo cargar lotes proximos a vencer.");
+      setError(err instanceof ApiError ? err.message : "No se pudo cargar lotes próximos a vencer.");
     }
   }, [withinDays]);
 
@@ -152,7 +152,7 @@ export default function LotesTab() {
           </Stack>
           <Stack direction="row" alignItems="center" spacing={1}>
             <TextField
-              label="Proximos dias"
+              label="Próximos días"
               type="number"
               size="small"
               value={withinDays}
@@ -176,7 +176,7 @@ export default function LotesTab() {
                 <TableCell>Bodega</TableCell>
                 <TableCell align="right">Stock</TableCell>
                 <TableCell>Vence</TableCell>
-                <TableCell align="right">Dias</TableCell>
+                <TableCell align="right">Días</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -184,7 +184,7 @@ export default function LotesTab() {
                 <TableRow>
                   <TableCell colSpan={6} align="center">
                     <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
-                      No hay lotes proximos a vencer en {withinDays} dias.
+                      No hay lotes próximos a vencer en {withinDays} días.
                     </Typography>
                   </TableCell>
                 </TableRow>

@@ -70,7 +70,7 @@ export default function TaxCodeDialog({ open, initial, onClose, onSaved }: TaxCo
   const handleSubmit = async () => {
     setError(null);
     if (!form.code.trim() || !form.name.trim()) {
-      setError("Codigo y nombre son obligatorios.");
+      setError("Código y nombre son obligatorios.");
       return;
     }
     setSaving(true);
@@ -103,7 +103,7 @@ export default function TaxCodeDialog({ open, initial, onClose, onSaved }: TaxCo
           <Grid container spacing={2}>
             <Grid item xs={12} sm={5}>
               <TextField
-                label="Codigo"
+                label="Código"
                 fullWidth
                 required
                 value={form.code}

@@ -34,9 +34,9 @@ const TYPE_LABEL: Record<DocumentType, string> = {
   boleta: "Boleta",
   factura: "Factura",
   nota_venta: "Nota de venta",
-  nota_credito: "Nota de credito",
-  cotizacion: "Cotizacion",
-  guia_despacho: "Guia de despacho",
+  nota_credito: "Nota de crédito",
+  cotizacion: "Cotización",
+  guia_despacho: "Guía de despacho",
 };
 
 const STATUS_COLOR: Record<DocumentStatus, "success" | "default" | "error"> = {
@@ -220,8 +220,8 @@ export default function DocumentosPage() {
             Documentos
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Boletas, facturas y notas de venta emitidas. Se registran con folio
-            interno; esta version no emite electronicamente al SII.
+            Boletas, facturas, notas de venta, cotizaciones, guías y notas de crédito.
+            Se registran con folio interno; esta versión no emite electrónicamente al SII.
           </Typography>
         </Box>
         <Tooltip title="Recargar">
@@ -252,9 +252,9 @@ export default function DocumentosPage() {
           <MenuItem value="boleta">Boleta</MenuItem>
           <MenuItem value="factura">Factura</MenuItem>
           <MenuItem value="nota_venta">Nota de venta</MenuItem>
-          <MenuItem value="nota_credito">Nota de credito</MenuItem>
-          <MenuItem value="cotizacion">Cotizacion</MenuItem>
-          <MenuItem value="guia_despacho">Guia de despacho</MenuItem>
+          <MenuItem value="nota_credito">Nota de crédito</MenuItem>
+          <MenuItem value="cotizacion">Cotización</MenuItem>
+          <MenuItem value="guia_despacho">Guía de despacho</MenuItem>
         </TextField>
         <TextField
           select

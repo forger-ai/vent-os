@@ -225,7 +225,7 @@ export default function ProductosPage() {
       },
       {
         field: "category",
-        headerName: "Categoria",
+        headerName: "Categoría",
         width: 140,
         sortable: true,
         valueGetter: (_, row) => row.category ?? "—",
@@ -349,7 +349,7 @@ export default function ProductosPage() {
               try {
                 await downloadProductsCsv(showInactive);
               } catch {
-                setError("No se pudo exportar el catalogo.");
+                setError("No se pudo exportar el catálogo.");
               } finally {
                 setExporting(false);
               }
@@ -373,7 +373,7 @@ export default function ProductosPage() {
       <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems="center">
         <TextField
           label="Buscar"
-          placeholder="Nombre, SKU o codigo de barras"
+          placeholder="Nombre, SKU o código de barras"
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -390,7 +390,7 @@ export default function ProductosPage() {
             setPagination((prev) => ({ ...prev, page: 0 }));
           }}
           renderInput={(params) => (
-            <TextField {...params} label="Categoria" size="small" sx={{ minWidth: 160 }} />
+            <TextField {...params} label="Categoría" size="small" sx={{ minWidth: 160 }} />
           )}
           sx={{ minWidth: 180 }}
         />
@@ -498,7 +498,7 @@ export default function ProductosPage() {
         open={csvImportOpen}
         onClose={() => setCsvImportOpen(false)}
         onImported={() => {
-          setToast("Catalogo actualizado desde CSV.");
+          setToast("Catálogo actualizado desde CSV.");
           fetchPage();
           refreshFilters();
         }}

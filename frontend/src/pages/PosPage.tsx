@@ -251,7 +251,7 @@ export default function PosPage() {
       setQuickCode("");
       codeInputRef.current?.focus();
     } catch (err) {
-      setPosError(err instanceof ApiError ? err.message : "No se encontro el codigo.");
+      setPosError(err instanceof ApiError ? err.message : "No se encontró el código.");
     }
   };
 
@@ -265,7 +265,7 @@ export default function PosPage() {
   const handleCheckout = async () => {
     setPosError(null);
     if (cart.length === 0) {
-      setPosError("El carrito esta vacio.");
+      setPosError("El carrito está vacío.");
       return;
     }
     if (!warehouseId) {
@@ -310,7 +310,7 @@ export default function PosPage() {
             line_discount_clp: l.line_discount_clp || 0,
           })),
         });
-        setToast(`Cotizacion #${result.folio} creada`);
+        setToast(`Cotización #${result.folio} creada`);
       } else {
         result = await posCheckout({
           document_type: documentType as
@@ -342,7 +342,7 @@ export default function PosPage() {
           carrier_name: isGuia ? carrierName.trim() || null : null,
           due_date: allowsCredit ? dueDate || null : null,
         });
-        setToast(isGuia ? `Guia #${result.folio} emitida` : `Emitido folio ${result.folio}`);
+        setToast(isGuia ? `Guía #${result.folio} emitida` : `Emitido folio ${result.folio}`);
       }
       setReceipt(result);
       setCart([]);
@@ -386,8 +386,8 @@ export default function PosPage() {
             Punto de venta
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Carrito con busqueda por SKU/codigo de barras, calculo de IVA e impuestos
-            adicionales, y emision local de boletas / facturas / notas de venta.
+            Carrito con búsqueda por SKU/código de barras, cálculo de IVA e impuestos
+            adicionales, y emisión local de boletas, facturas, notas de venta, guías y cotizaciones.
           </Typography>
         </Box>
         {warehouseId && (
@@ -400,7 +400,7 @@ export default function PosPage() {
             <Chip
               color="warning"
               variant="outlined"
-              label="Sin caja abierta · abrila en la pestana Caja"
+              label="Sin caja abierta · ábrela en la pestaña Caja"
             />
           )
         )}
@@ -455,13 +455,13 @@ export default function PosPage() {
           <MenuItem value="boleta">Boleta</MenuItem>
           <MenuItem value="factura">Factura</MenuItem>
           <MenuItem value="nota_venta">Nota de venta</MenuItem>
-          <MenuItem value="cotizacion">Cotizacion</MenuItem>
-          <MenuItem value="guia_despacho">Guia de despacho</MenuItem>
+          <MenuItem value="cotizacion">Cotización</MenuItem>
+          <MenuItem value="guia_despacho">Guía de despacho</MenuItem>
         </TextField>
         {isQuote && (
           <TextField
             type="date"
-            label="Valida hasta"
+            label="Válida hasta"
             size="small"
             value={validUntil}
             onChange={(e) => setValidUntil(e.target.value)}
@@ -486,7 +486,7 @@ export default function PosPage() {
       {isGuia && (
         <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
           <TextField
-            label="Direccion de entrega"
+            label="Dirección de entrega"
             size="small"
             value={shippingAddress}
             onChange={(e) => setShippingAddress(e.target.value)}
@@ -500,7 +500,7 @@ export default function PosPage() {
             sx={{ minWidth: 180 }}
           />
           <TextField
-            label="Notas de envio"
+            label="Notas de envío"
             size="small"
             value={shippingNotes}
             onChange={(e) => setShippingNotes(e.target.value)}
@@ -520,7 +520,7 @@ export default function PosPage() {
               <Stack direction="row" spacing={1}>
                 <TextField
                   inputRef={codeInputRef}
-                  label="SKU o codigo de barras"
+                  label="SKU o código de barras"
                   size="small"
                   fullWidth
                   value={quickCode}
@@ -540,7 +540,7 @@ export default function PosPage() {
                 fullWidth
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
-                placeholder="Por nombre, SKU o codigo"
+                placeholder="Por nombre, SKU o código"
               />
               <Box sx={{ maxHeight: 380, overflow: "auto" }}>
                 {searching && (
@@ -624,7 +624,7 @@ export default function PosPage() {
                     <TableRow>
                       <TableCell colSpan={6} align="center">
                         <Typography variant="caption" color="text.secondary">
-                          Carrito vacio. Agrega productos desde la izquierda.
+                          Carrito vacío. Agrega productos desde la izquierda.
                         </Typography>
                       </TableCell>
                     </TableRow>
@@ -799,7 +799,7 @@ export default function PosPage() {
                   <TextField
                     select
                     size="small"
-                    label="Metodo"
+                    label="Método"
                     value={p.payment_method_id}
                     onChange={(e) =>
                       setPayments((prev) =>
@@ -903,9 +903,9 @@ export default function PosPage() {
                   ? "Creando..."
                   : "Emitiendo..."
                 : isQuote
-                ? "Crear cotizacion"
+                ? "Crear cotización"
                 : isGuia
-                ? "Emitir guia de despacho"
+                ? "Emitir guía de despacho"
                 : `Emitir ${
                     documentType === "factura"
                       ? "factura"

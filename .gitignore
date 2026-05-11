@@ -39,3 +39,6 @@ Thumbs.db
 backend/data/*.sqlite
 backend/data/*.sqlite-journal
 backend/data/*.sqlite-*
+
+# Editor / preview-tooling
+.claude/

@@ -211,7 +211,7 @@ export default function PreciosTab() {
       {selectedList?.is_default && (
         <Alert severity="info" variant="outlined">
           Esta es la lista por defecto. Sus precios siempre coinciden con el precio base
-          de cada variante; no admite overrides aqui. Edita la variante para cambiar el
+          de cada variante; no admite overrides aquí. Edita la variante para cambiar el
           precio base.
         </Alert>
       )}

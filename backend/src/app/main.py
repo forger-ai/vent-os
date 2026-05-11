@@ -8,6 +8,7 @@ from app.health import router as health_router
 from app.routers.batches import router as batches_router
 from app.routers.cash import router as cash_router
 from app.routers.customers import router as customers_router
+from app.routers.dashboard import router as dashboard_router
 from app.routers.documents import router as documents_router
 from app.routers.images import _images_dir
 from app.routers.images import router as images_router
@@ -24,7 +25,7 @@ from app.routers.warehouses import router as warehouses_router
 
 app = FastAPI(
     title="Vent OS API",
-    version="0.12.0",
+    version="0.13.0",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json",
@@ -62,6 +63,7 @@ app.include_router(documents_router, prefix="/api/documents", tags=["documents"]
 app.include_router(quotes_router, prefix="/api/quotes", tags=["quotes"])
 app.include_router(pos_router, prefix="/api/pos", tags=["pos"])
 app.include_router(cash_router, prefix="/api/cash", tags=["cash"])
+app.include_router(dashboard_router, prefix="/api/dashboard", tags=["dashboard"])
 
 
 @app.on_event("startup")

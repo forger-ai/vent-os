@@ -1,8 +1,18 @@
 {
   "name": "vent-os",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "description": "Local-first POS, sales, and inventory app for Chilean SMBs (Pymes). FastAPI backend, Vite + React frontend, SQLite storage.",
   "changelog": [
+    {
+      "version": "0.13.0",
+      "summary": "Tab Inicio con dashboard de KPIs y alertas.",
+      "changes": [
+        "Nuevo endpoint GET /api/dashboard/summary computa en una sola llamada: ventas hoy/semana/mes (netas, restando NCs), cotizaciones activas y vencidas, guias sin facturar, productos con stock bajo, lotes vencidos y proximos a vencer, top productos del mes, pagos por metodo del mes, y sesiones de caja abiertas con su esperado.",
+        "Filtros opcionales: warehouse_id y expiring_within_days.",
+        "Frontend: nueva tab 'Inicio' como primera del shell, con cards de KPIs, contadores de pendientes, tarjetas de caja abierta por bodega, tablas de top productos / pagos / stock bajo / lotes proximos a vencer.",
+        "Pickup automatico al abrir el app: la primera vista que ve el usuario es el dashboard."
+      ]
+    },
     {
       "version": "0.12.0",
       "summary": "Guias de despacho con conversion posterior a factura/boleta.",

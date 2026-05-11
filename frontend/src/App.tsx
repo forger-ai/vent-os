@@ -13,6 +13,7 @@ import {
 import { get } from "./api/client";
 import ProductosPage from "./pages/ProductosPage";
 import ClientesPage from "./pages/ClientesPage";
+import HomePage from "./pages/HomePage";
 import PosPage from "./pages/PosPage";
 import DocumentosPage from "./pages/DocumentosPage";
 import InventarioPage from "./pages/InventarioPage";
@@ -22,6 +23,7 @@ import ConfiguracionPage from "./pages/ConfiguracionPage";
 type HealthStatus = "loading" | "ok" | "error";
 
 const TABS = [
+  { id: "home", label: "Inicio" },
   { id: "pos", label: "POS" },
   { id: "productos", label: "Productos" },
   { id: "clientes", label: "Clientes" },
@@ -35,7 +37,7 @@ type TabId = (typeof TABS)[number]["id"];
 
 export default function App() {
   const [status, setStatus] = useState<HealthStatus>("loading");
-  const [tab, setTab] = useState<TabId>("pos");
+  const [tab, setTab] = useState<TabId>("home");
 
   useEffect(() => {
     get<{ status: string }>("/api/health")
@@ -78,6 +80,7 @@ export default function App() {
       </AppBar>
 
       <Container maxWidth="lg" sx={{ flexGrow: 1, py: 3 }}>
+        {tab === "home" && <HomePage />}
         {tab === "pos" && <PosPage />}
         {tab === "productos" && <ProductosPage />}
         {tab === "clientes" && <ClientesPage />}

@@ -14,6 +14,7 @@ document-creation endpoint. The IVA rate is fixed at 19% (Chile) for v0.x.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Optional
 
@@ -480,6 +481,225 @@ def emit_document(session: Session, payload: CheckoutInput) -> Document:
 
 
 # ── Cancel ────────────────────────────────────────────────────────────────────
+
+
+# ── Credit note (nota de credito) ────────────────────────────────────────────
+
+
+@dataclass
+class CreditNoteItem:
+    """Linea a devolver: referencia al item original + cantidad a refundir."""
+
+    original_item_id: str
+    quantity: Decimal
+
+
+@dataclass
+class CreditNoteInput:
+    original_document_id: str
+    items: list[CreditNoteItem]
+    reason: str
+    notes: Optional[str]
+
+
+def _already_credited_qty(
+    session: Session, parent_doc_id: str, original_item_sku: Optional[str]
+) -> Decimal:
+    """Sum of quantities already credited for a given (parent doc, item).
+
+    Match items by sku_snapshot since NC items reference the variant but not
+    the original DocumentItem.id. If sku is None we fall back to 0 (cannot
+    track partial returns for items without sku).
+    """
+    if original_item_sku is None:
+        return DEC_ZERO
+
+    rows = session.exec(
+        select(DocumentItem)
+        .join(Document, Document.id == DocumentItem.document_id)
+        .where(Document.parent_document_id == parent_doc_id)
+        .where(Document.document_type == DocumentType.nota_credito)
+        .where(Document.status == DocumentStatus.issued)
+        .where(DocumentItem.sku_snapshot == original_item_sku)
+    ).all()
+    return sum((r.quantity for r in rows), DEC_ZERO)
+
+
+def emit_credit_note(session: Session, payload: CreditNoteInput) -> Document:
+    """Emite una NC parcial o total sobre un documento existente.
+
+    - El documento padre debe ser issued y de tipo boleta/factura/nota_venta.
+    - Cada item devuelto referencia un DocumentItem original. La cantidad a
+      devolver no puede exceder la vendida menos lo ya devuelto.
+    - Calcula proporcionalmente subtotal, IVA y total. Stock se incrementa
+      por las cantidades devueltas.
+    - El total de la NC se suma como pago "negativo" implicito: la sesion de
+      caja resta su monto.
+    """
+    if not payload.items:
+        raise HTTPException(status_code=400, detail="La nota de credito no tiene items.")
+    if not payload.reason or not payload.reason.strip():
+        raise HTTPException(status_code=400, detail="El motivo de la NC es obligatorio.")
+
+    original = session.get(Document, payload.original_document_id)
+    if original is None:
+        raise HTTPException(status_code=404, detail="Documento original no encontrado.")
+    if original.status != DocumentStatus.issued:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Solo se puede emitir NC sobre documentos emitidos (estado actual: {original.status.value}).",
+        )
+    if original.document_type == DocumentType.nota_credito:
+        raise HTTPException(
+            status_code=400, detail="No se puede emitir una NC sobre otra NC."
+        )
+
+    warehouse = session.get(Warehouse, original.warehouse_id) if original.warehouse_id else None
+    if warehouse is None:
+        raise HTTPException(status_code=400, detail="El documento original no tiene bodega.")
+
+    # Validate and prep each refund line.
+    original_items: dict[str, DocumentItem] = {}
+    for item in session.exec(
+        select(DocumentItem).where(DocumentItem.document_id == original.id)
+    ).all():
+        original_items[item.id] = item
+
+    nc_lines: list[tuple[DocumentItem, Decimal, Decimal, Decimal, Decimal]] = []
+    # (original_item, refund_qty, refund_gross, refund_net, refund_iva)
+
+    additional_total = DEC_ZERO
+
+    for refund in payload.items:
+        original_item = original_items.get(refund.original_item_id)
+        if original_item is None:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Item original {refund.original_item_id} no pertenece al documento.",
+            )
+        refund_qty = Decimal(refund.quantity)
+        if refund_qty <= 0:
+            continue
+
+        already_returned = _already_credited_qty(session, original.id, original_item.sku_snapshot)
+        max_return = original_item.quantity - already_returned
+        if refund_qty > max_return:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Item {original_item.sku_snapshot or original_item.name_snapshot}: "
+                    f"vendido {original_item.quantity}, ya devuelto {already_returned}, "
+                    f"intentas devolver {refund_qty}."
+                ),
+            )
+
+        # Compute proportional gross/net/iva for this refund.
+        # Original line: line_total_clp = unit_price * orig_qty - discount
+        # We refund proportional to qty share.
+        share = refund_qty / original_item.quantity
+        refund_gross = original_item.line_total_clp * share
+        if original_item.iva_affected:
+            refund_net = refund_gross / (Decimal("1") + IVA_RATE)
+            refund_iva = refund_gross - refund_net
+        else:
+            refund_net = refund_gross
+            refund_iva = DEC_ZERO
+
+        # Additional taxes (if variant still exists and has tax codes).
+        if original_item.variant_id is not None:
+            tax_codes = _variant_tax_codes(session, original_item.variant_id)
+            for tc in tax_codes:
+                additional_total += refund_net * tc.rate
+
+        nc_lines.append((original_item, refund_qty, refund_gross, refund_net, refund_iva))
+
+    if not nc_lines:
+        raise HTTPException(status_code=400, detail="No hay cantidades positivas a devolver.")
+
+    subtotal = sum((line[3] for line in nc_lines), DEC_ZERO)
+    iva = sum((line[4] for line in nc_lines), DEC_ZERO)
+    total = subtotal + iva + additional_total
+
+    # Auto-link to open cash session for the warehouse, like emit_document.
+    from app.models import CashSession, CashSessionStatus
+
+    auto_session = session.exec(
+        select(CashSession)
+        .where(CashSession.warehouse_id == warehouse.id)
+        .where(CashSession.status == CashSessionStatus.open)
+    ).first()
+
+    nc = Document(
+        document_type=DocumentType.nota_credito,
+        folio=next_folio(session, DocumentType.nota_credito),
+        customer_id=original.customer_id,
+        warehouse_id=warehouse.id,
+        parent_document_id=original.id,
+        status=DocumentStatus.issued,
+        subtotal_clp=_round_clp(subtotal),
+        iva_clp=_round_clp(iva),
+        total_clp=_round_clp(total),
+        notes=(payload.reason.strip() + (f"\n{payload.notes.strip()}" if payload.notes else "")),
+        cash_session_id=auto_session.id if auto_session else None,
+    )
+    session.add(nc)
+    session.flush()
+
+    for original_item, refund_qty, refund_gross, _, _ in nc_lines:
+        session.add(
+            DocumentItem(
+                document_id=nc.id,
+                variant_id=original_item.variant_id,
+                sku_snapshot=original_item.sku_snapshot,
+                name_snapshot=original_item.name_snapshot,
+                quantity=refund_qty,
+                unit_price_clp=original_item.unit_price_clp,
+                iva_affected=original_item.iva_affected,
+                discount_clp=DEC_ZERO,
+                line_total_clp=_round_clp(refund_gross),
+            )
+        )
+
+        # Restore stock for products. Services don't move stock.
+        if original_item.variant_id is None:
+            continue
+        variant = session.get(ProductVariant, original_item.variant_id)
+        if variant is None:
+            continue
+        product = session.get(Product, variant.product_id)
+        if product is None or product.product_type.value == "service":
+            continue
+
+        level = session.exec(
+            select(StockLevel)
+            .where(StockLevel.variant_id == variant.id)
+            .where(StockLevel.warehouse_id == warehouse.id)
+        ).first()
+        if level is None:
+            level = StockLevel(
+                variant_id=variant.id,
+                warehouse_id=warehouse.id,
+                qty=DEC_ZERO,
+            )
+            session.add(level)
+            session.flush()
+        level.qty += refund_qty
+        level.updated_at = datetime.now(timezone.utc)
+        session.add(level)
+
+        session.add(
+            StockMovement(
+                variant_id=variant.id,
+                warehouse_id=warehouse.id,
+                kind=StockMovementKind.entrada,
+                quantity=refund_qty,
+                qty_after=level.qty,
+                reason=f"NC #{nc.folio} {payload.reason.strip()}",
+                document_id=nc.id,
+            )
+        )
+
+    return nc
 
 
 def cancel_document(session: Session, document: Document) -> None:

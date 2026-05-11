@@ -13,7 +13,14 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from sqlmodel import Session, func, select
 
-from app.billing import cancel_document
+from decimal import Decimal
+
+from app.billing import (
+    CreditNoteInput,
+    CreditNoteItem,
+    cancel_document,
+    emit_credit_note,
+)
 from app.database import engine
 from app.models import (
     Customer,
@@ -186,3 +193,56 @@ def cancel_doc(document_id: str) -> DocumentOut:
         session.commit()
         session.refresh(d)
         return _document_to_out(session, d)
+
+
+class CreditNoteItemInput(BaseModel):
+    original_item_id: str
+    quantity: float
+
+
+class CreditNoteInputModel(BaseModel):
+    items: list[CreditNoteItemInput]
+    reason: str
+    notes: Optional[str] = None
+
+
+@router.post("/{document_id}/credit-note", response_model=DocumentOut, status_code=201)
+def create_credit_note(document_id: str, payload: CreditNoteInputModel) -> DocumentOut:
+    """Emite una nota de credito parcial o total sobre el documento dado.
+
+    - El doc original queda emitido; la NC se crea con su propio folio.
+    - Stock se revierte por las cantidades devueltas.
+    - La sesion de caja abierta (si existe) absorbe la NC, restandola del cash_total.
+    """
+    with Session(engine) as session:
+        ci = CreditNoteInput(
+            original_document_id=document_id,
+            items=[
+                CreditNoteItem(
+                    original_item_id=it.original_item_id,
+                    quantity=Decimal(str(it.quantity)),
+                )
+                for it in payload.items
+            ],
+            reason=payload.reason,
+            notes=payload.notes,
+        )
+        nc = emit_credit_note(session, ci)
+        session.commit()
+        session.refresh(nc)
+        return _document_to_out(session, nc)
+
+
+@router.get("/{document_id}/credit-notes", response_model=list[DocumentRow])
+def list_credit_notes_for(document_id: str) -> list[DocumentRow]:
+    with Session(engine) as session:
+        d = session.get(Document, document_id)
+        if d is None:
+            raise HTTPException(status_code=404, detail="Documento no encontrado")
+        ncs = session.exec(
+            select(Document)
+            .where(Document.parent_document_id == document_id)
+            .where(Document.document_type == DocumentType.nota_credito)
+            .order_by(Document.issued_at.desc(), Document.folio.desc())
+        ).all()
+        return [_to_row(session, n) for n in ncs]

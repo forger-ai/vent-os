@@ -23,7 +23,7 @@ from app.routers.warehouses import router as warehouses_router
 
 app = FastAPI(
     title="Vent OS API",
-    version="0.9.0",
+    version="0.10.0",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json",

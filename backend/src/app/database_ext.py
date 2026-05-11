@@ -219,6 +219,9 @@ def run_pre_create_migrations() -> MigrationContext:
     _add_column_if_missing("cashsession", "warehouse_id", "VARCHAR")
     _add_column_if_missing("cashsession", "opened_by", "VARCHAR")
 
+    # v0.10: nota de credito references its parent document
+    _add_column_if_missing("document", "parent_document_id", "VARCHAR")
+
     return context
 
 

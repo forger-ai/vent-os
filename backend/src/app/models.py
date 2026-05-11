@@ -65,6 +65,7 @@ class DocumentType(str, Enum):
     boleta = "boleta"
     factura = "factura"
     nota_venta = "nota_venta"
+    nota_credito = "nota_credito"
 
 
 class DocumentStatus(str, Enum):
@@ -290,6 +291,12 @@ class Document(SQLModel, table=True):
     issued_at: date = Field(default_factory=lambda: datetime.now(timezone.utc).date())
     customer_id: Optional[str] = Field(default=None, foreign_key="customer.id")
     warehouse_id: Optional[str] = Field(default=None, foreign_key="warehouse.id")
+    parent_document_id: Optional[str] = Field(
+        default=None,
+        foreign_key="document.id",
+        index=True,
+        description="Only set on nota_credito: original document it refunds.",
+    )
     status: DocumentStatus = Field(default=DocumentStatus.draft)
     subtotal_clp: Decimal = Field(default=Decimal("0"))
     iva_clp: Decimal = Field(default=Decimal("0"))

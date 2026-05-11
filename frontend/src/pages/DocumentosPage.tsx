@@ -34,6 +34,7 @@ const TYPE_LABEL: Record<DocumentType, string> = {
   boleta: "Boleta",
   factura: "Factura",
   nota_venta: "Nota de venta",
+  nota_credito: "Nota de credito",
 };
 
 const STATUS_COLOR: Record<DocumentStatus, "success" | "default" | "error"> = {
@@ -113,13 +114,19 @@ export default function DocumentosPage() {
       {
         field: "document_type",
         headerName: "Tipo",
-        width: 130,
+        width: 140,
         renderCell: (p) => (
           <Chip
             size="small"
             label={TYPE_LABEL[p.row.document_type]}
-            color={p.row.document_type === "factura" ? "primary" : "default"}
-            variant="outlined"
+            color={
+              p.row.document_type === "nota_credito"
+                ? "warning"
+                : p.row.document_type === "factura"
+                ? "primary"
+                : "default"
+            }
+            variant={p.row.document_type === "nota_credito" ? "filled" : "outlined"}
           />
         ),
       },
@@ -233,6 +240,7 @@ export default function DocumentosPage() {
           <MenuItem value="boleta">Boleta</MenuItem>
           <MenuItem value="factura">Factura</MenuItem>
           <MenuItem value="nota_venta">Nota de venta</MenuItem>
+          <MenuItem value="nota_credito">Nota de credito</MenuItem>
         </TextField>
         <TextField
           select

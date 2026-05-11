@@ -1,8 +1,21 @@
 {
   "name": "vent-os",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Local-first POS, sales, and inventory app for Chilean SMBs (Pymes). FastAPI backend, Vite + React frontend, SQLite storage.",
   "changelog": [
+    {
+      "version": "0.10.0",
+      "summary": "Notas de credito (devoluciones parciales o totales) sobre documentos emitidos.",
+      "changes": [
+        "Nuevo tipo de documento `nota_credito` con su propia secuencia de folio y referencia al documento padre via parent_document_id (migracion aditiva).",
+        "Endpoint POST /api/documents/{id}/credit-note: recibe items + cantidades a devolver + motivo. Calcula proporcionalmente neto, IVA y impuestos adicionales; revierte stock; auto-asocia a la caja abierta.",
+        "Validacion server-side: no se puede devolver mas que (vendido - ya devuelto en NCs previas).",
+        "Caja: las NCs emitidas en la sesion RESTAN del cash_total. Documentos sin pagos explicitos asumen devolucion en efectivo.",
+        "DocumentOut incluye parent_document_id, parent_folio, returned_total_clp y effective_total_clp (total - devuelto).",
+        "UI: drawer de detalle muestra NCs vinculadas y total efectivo neto; nuevo dialog para crear NC con tabla de items y cantidades; chip 'NC' en lista de documentos; filtro por tipo incluye nota_credito.",
+        "Se mantiene 'Anular documento' como flujo separado para correccion rapida del mismo turno; NC se usa para devoluciones reales con historico preservado."
+      ]
+    },
     {
       "version": "0.9.0",
       "summary": "Metodos de pago en checkout, pagos mixtos y separacion efectivo/electronico en caja.",

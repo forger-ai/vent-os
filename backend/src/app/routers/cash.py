@@ -27,6 +27,7 @@ from app.models import (
     Document,
     DocumentPayment,
     DocumentStatus,
+    DocumentType,
     PaymentMethod,
     Warehouse,
 )
@@ -101,35 +102,57 @@ def _normalize_optional_str(value: Optional[str]) -> Optional[str]:
 
 
 def _session_summary(session: Session, cash_session_id: str) -> SessionSummary:
+    """Compute summary for a cash session.
+
+    Sales documents (boleta/factura/nota_venta) SUMAN their totals. Credit
+    notes (nota_credito) emitted in the same session RESTAN — they refund
+    cash that has to come out of the till. Cancelled documents are excluded
+    entirely.
+    """
     docs = session.exec(
         select(Document).where(Document.cash_session_id == cash_session_id)
     ).all()
-    count = 0
-    total = Decimal("0")
+    sales_count = 0
+    nc_count = 0
+    sales_total = Decimal("0")
+    nc_total = Decimal("0")
     cancelled = 0
-    issued_ids: list[str] = []
+    sales_ids: list[str] = []
+    nc_ids: list[str] = []
     for d in docs:
-        if d.status == DocumentStatus.issued:
-            count += 1
-            total += d.total_clp
-            issued_ids.append(d.id)
-        elif d.status == DocumentStatus.cancelled:
+        if d.status == DocumentStatus.cancelled:
             cancelled += 1
+            continue
+        if d.status != DocumentStatus.issued:
+            continue
+        if d.document_type == DocumentType.nota_credito:
+            nc_count += 1
+            nc_total += d.total_clp
+            nc_ids.append(d.id)
+        else:
+            sales_count += 1
+            sales_total += d.total_clp
+            sales_ids.append(d.id)
 
     cash_total = Decimal("0")
     non_cash_total = Decimal("0")
     breakdown: dict[str, dict] = {}
-    if issued_ids:
+
+    def _accumulate(doc_ids: list[str], sign: Decimal) -> None:
+        if not doc_ids:
+            return
         payments = session.exec(
             select(DocumentPayment, PaymentMethod)
             .join(PaymentMethod, PaymentMethod.id == DocumentPayment.payment_method_id)
-            .where(DocumentPayment.document_id.in_(issued_ids))
+            .where(DocumentPayment.document_id.in_(doc_ids))
         ).all()
+        nonlocal cash_total, non_cash_total
         for p, pm in payments:
+            amount = p.amount_clp * sign
             if pm.is_cash:
-                cash_total += p.amount_clp
+                cash_total += amount
             else:
-                non_cash_total += p.amount_clp
+                non_cash_total += amount
             entry = breakdown.setdefault(
                 pm.id,
                 {
@@ -140,7 +163,41 @@ def _session_summary(session: Session, cash_session_id: str) -> SessionSummary:
                     "amount": Decimal("0"),
                 },
             )
-            entry["amount"] += p.amount_clp
+            entry["amount"] += amount
+
+    _accumulate(sales_ids, Decimal("1"))
+    # NCs without explicit payments: assume refunded in cash (fallback).
+    # If a NC has explicit payments (future feature), they would offset by method.
+    for nc_id in nc_ids:
+        nc_doc = next(d for d in docs if d.id == nc_id)
+        nc_payments = session.exec(
+            select(DocumentPayment, PaymentMethod)
+            .join(PaymentMethod, PaymentMethod.id == DocumentPayment.payment_method_id)
+            .where(DocumentPayment.document_id == nc_id)
+        ).all()
+        if nc_payments:
+            _accumulate([nc_id], Decimal("-1"))
+        else:
+            # No payments recorded on the NC: subtract from cash (default refund).
+            cash_total -= nc_doc.total_clp
+            cash_pm = session.exec(
+                select(PaymentMethod)
+                .where(PaymentMethod.is_cash.is_(True))
+                .where(PaymentMethod.is_active.is_(True))
+                .order_by(PaymentMethod.sort_order.asc())
+            ).first()
+            if cash_pm is not None:
+                entry = breakdown.setdefault(
+                    cash_pm.id,
+                    {
+                        "payment_method_id": cash_pm.id,
+                        "code": cash_pm.code,
+                        "name": cash_pm.name,
+                        "is_cash": True,
+                        "amount": Decimal("0"),
+                    },
+                )
+                entry["amount"] -= nc_doc.total_clp
 
     items = sorted(
         (
@@ -157,8 +214,8 @@ def _session_summary(session: Session, cash_session_id: str) -> SessionSummary:
     )
 
     return SessionSummary(
-        documents_count=count,
-        sales_total_clp=float(total),
+        documents_count=sales_count + nc_count,
+        sales_total_clp=float(sales_total - nc_total),
         cash_total_clp=float(cash_total),
         non_cash_total_clp=float(non_cash_total),
         cancelled_count=cancelled,

@@ -268,6 +268,11 @@ class DocumentOut(BaseModel):
     customer_rut: Optional[str]
     warehouse_id: Optional[str]
     warehouse_code: Optional[str]
+    parent_document_id: Optional[str]
+    parent_folio: Optional[int]
+    parent_document_type: Optional[DocumentType]
+    returned_total_clp: float
+    effective_total_clp: float
     subtotal_clp: float
     iva_clp: float
     total_clp: float
@@ -277,11 +282,36 @@ class DocumentOut(BaseModel):
 
 
 def _document_to_out(session: Session, document: Document) -> DocumentOut:
-    from app.models import Customer, DocumentItem, DocumentPayment, PaymentMethod
+    from app.models import (
+        Customer,
+        DocumentItem,
+        DocumentPayment,
+        DocumentStatus as _DS,
+        DocumentType as _DT,
+        PaymentMethod,
+    )
 
     items = session.exec(
         select(DocumentItem).where(DocumentItem.document_id == document.id)
     ).all()
+
+    parent_folio = None
+    parent_type = None
+    if document.parent_document_id:
+        parent = session.get(Document, document.parent_document_id)
+        if parent:
+            parent_folio = parent.folio
+            parent_type = parent.document_type
+
+    returned_total = 0.0
+    if document.document_type != _DT.nota_credito:
+        ncs = session.exec(
+            select(Document)
+            .where(Document.parent_document_id == document.id)
+            .where(Document.document_type == _DT.nota_credito)
+            .where(Document.status == _DS.issued)
+        ).all()
+        returned_total = float(sum((nc.total_clp for nc in ncs), Decimal("0")))
 
     payment_rows = session.exec(
         select(DocumentPayment, PaymentMethod)
@@ -314,6 +344,11 @@ def _document_to_out(session: Session, document: Document) -> DocumentOut:
         customer_rut=customer_rut,
         warehouse_id=document.warehouse_id,
         warehouse_code=warehouse_code,
+        parent_document_id=document.parent_document_id,
+        parent_folio=parent_folio,
+        parent_document_type=parent_type,
+        returned_total_clp=returned_total,
+        effective_total_clp=float(document.total_clp) - returned_total,
         subtotal_clp=float(document.subtotal_clp),
         iva_clp=float(document.iva_clp),
         total_clp=float(document.total_clp),

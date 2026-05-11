@@ -56,3 +56,20 @@ export const getDocument = (id: string) => get<DocumentOut>(`/api/documents/${id
 
 export const cancelDocument = (id: string) =>
   post<DocumentOut>(`/api/documents/${id}/cancel`, {});
+
+export interface CreditNoteItemInput {
+  original_item_id: string;
+  quantity: number;
+}
+
+export interface CreditNoteInput {
+  items: CreditNoteItemInput[];
+  reason: string;
+  notes?: string | null;
+}
+
+export const createCreditNote = (documentId: string, body: CreditNoteInput) =>
+  post<DocumentOut>(`/api/documents/${documentId}/credit-note`, body);
+
+export const listCreditNotesFor = (documentId: string) =>
+  get<DocumentRow[]>(`/api/documents/${documentId}/credit-notes`);

@@ -16,15 +16,19 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
+import AssignmentReturnIcon from "@mui/icons-material/AssignmentReturn";
 import BlockIcon from "@mui/icons-material/Block";
 import CloseIcon from "@mui/icons-material/Close";
 import { ApiError } from "../../api/client";
 import {
   type DocumentOut,
+  type DocumentRow,
   cancelDocument,
   getDocument,
+  listCreditNotesFor,
 } from "../../api/documents";
 import { formatCLP, formatQty } from "../../util/format";
+import CreditNoteDialog from "./CreditNoteDialog";
 
 interface DocumentDetailDrawerProps {
   documentId: string | null;
@@ -37,6 +41,7 @@ const TYPE_LABEL: Record<string, string> = {
   boleta: "Boleta",
   factura: "Factura",
   nota_venta: "Nota de venta",
+  nota_credito: "Nota de credito",
 };
 
 const STATUS_COLOR: Record<string, "success" | "default" | "error"> = {
@@ -61,6 +66,8 @@ export default function DocumentDetailDrawer({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [childNCs, setChildNCs] = useState<DocumentRow[]>([]);
+  const [creditOpen, setCreditOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!documentId) return;
@@ -69,6 +76,16 @@ export default function DocumentDetailDrawer({
     try {
       const d = await getDocument(documentId);
       setDoc(d);
+      if (d.document_type !== "nota_credito") {
+        try {
+          const ncs = await listCreditNotesFor(d.id);
+          setChildNCs(ncs);
+        } catch {
+          setChildNCs([]);
+        }
+      } else {
+        setChildNCs([]);
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "No se pudo cargar el documento.");
     } finally {
@@ -209,7 +226,53 @@ export default function DocumentDetailDrawer({
                 <Typography variant="h6" fontWeight={700}>
                   Total: {formatCLP(doc.total_clp)}
                 </Typography>
+                {doc.returned_total_clp > 0 && (
+                  <>
+                    <Typography variant="body2" color="warning.main">
+                      Devuelto via NC: −{formatCLP(doc.returned_total_clp)}
+                    </Typography>
+                    <Typography variant="body2" fontWeight={600}>
+                      Efectivo neto: {formatCLP(doc.effective_total_clp)}
+                    </Typography>
+                  </>
+                )}
+                {doc.parent_folio && (
+                  <Typography variant="caption" color="text.secondary">
+                    NC sobre {TYPE_LABEL[doc.parent_document_type ?? ""] ?? doc.parent_document_type} #{doc.parent_folio}
+                  </Typography>
+                )}
               </Stack>
+
+              {childNCs.length > 0 && (
+                <>
+                  <Divider />
+                  <Stack spacing={0.5}>
+                    <Typography variant="caption" color="text.secondary">
+                      Notas de credito emitidas sobre este documento
+                    </Typography>
+                    {childNCs.map((nc) => (
+                      <Stack
+                        key={nc.id}
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="center"
+                      >
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Chip
+                            size="small"
+                            color="warning"
+                            label={`NC #${nc.folio}`}
+                          />
+                          <Typography variant="caption" color="text.secondary">
+                            {nc.issued_at} · {STATUS_LABEL[nc.status] ?? nc.status}
+                          </Typography>
+                        </Stack>
+                        <Typography variant="body2">−{formatCLP(nc.total_clp)}</Typography>
+                      </Stack>
+                    ))}
+                  </Stack>
+                </>
+              )}
 
               {doc.payments.length > 0 && (
                 <>
@@ -262,20 +325,51 @@ export default function DocumentDetailDrawer({
           <>
             <Divider />
             <Box sx={{ p: 2 }}>
-              <Button
-                variant="outlined"
-                color="error"
-                fullWidth
-                startIcon={<BlockIcon />}
-                disabled={cancelling}
-                onClick={handleCancel}
-              >
-                {cancelling ? "Anulando..." : "Anular documento"}
-              </Button>
+              <Stack spacing={1}>
+                {doc.document_type !== "nota_credito" && (
+                  <Button
+                    variant="contained"
+                    color="warning"
+                    fullWidth
+                    startIcon={<AssignmentReturnIcon />}
+                    onClick={() => setCreditOpen(true)}
+                    disabled={cancelling}
+                  >
+                    Emitir nota de credito (devolucion)
+                  </Button>
+                )}
+                <Button
+                  variant="outlined"
+                  color="error"
+                  fullWidth
+                  startIcon={<BlockIcon />}
+                  disabled={cancelling}
+                  onClick={handleCancel}
+                >
+                  {cancelling ? "Anulando..." : "Anular documento (rapido)"}
+                </Button>
+                <Typography variant="caption" color="text.secondary" textAlign="center">
+                  Anular: error operativo, revierte todo. Nota de credito:
+                  devolucion parcial/total, deja el documento original como historico.
+                </Typography>
+              </Stack>
             </Box>
           </>
         )}
       </Box>
+
+      {doc && (
+        <CreditNoteDialog
+          open={creditOpen}
+          document={doc}
+          onClose={() => setCreditOpen(false)}
+          onCreated={() => {
+            setCreditOpen(false);
+            load();
+            onChanged();
+          }}
+        />
+      )}
     </Drawer>
   );
 }

@@ -215,6 +215,10 @@ def run_pre_create_migrations() -> MigrationContext:
         "BOOLEAN NOT NULL DEFAULT 0",
     )
 
+    # v0.8: cash session gains warehouse + cashier name
+    _add_column_if_missing("cashsession", "warehouse_id", "VARCHAR")
+    _add_column_if_missing("cashsession", "opened_by", "VARCHAR")
+
     return context
 
 

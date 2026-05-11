@@ -1,8 +1,20 @@
 {
   "name": "vent-os",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Local-first POS, sales, and inventory app for Chilean SMBs (Pymes). FastAPI backend, Vite + React frontend, SQLite storage.",
   "changelog": [
+    {
+      "version": "0.8.0",
+      "summary": "Caja: apertura, cierre con conteo y conciliacion, historial.",
+      "changes": [
+        "Sesion de caja por bodega: una abierta a la vez por bodega. Apertura con monto inicial y nombre del cajero (opcional).",
+        "Cierre con conteo fisico: el sistema calcula esperado = inicial + ventas, contado = lo ingresado, diferencia = contado - esperado (sobrante o faltante).",
+        "Auto-asociacion: las ventas del POS se vinculan automaticamente a la caja abierta de la bodega seleccionada, sin pasos extra.",
+        "Tab Caja: tarjeta de sesion activa con KPIs en vivo (documentos, ventas, esperado) + historial paginado.",
+        "POS muestra chip de 'Caja abierta' con documentos y ventas acumulados, o aviso de 'Sin caja abierta'.",
+        "Documentos anulados durante una sesion no cuentan en el esperado."
+      ]
+    },
     {
       "version": "0.7.0",
       "summary": "Punto de venta funcional + emision de boletas, facturas y notas de venta + clientes.",

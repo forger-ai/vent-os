@@ -26,6 +26,7 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
 import RemoveIcon from "@mui/icons-material/Remove";
 import { ApiError } from "../api/client";
+import { type CashSessionRow, currentSession } from "../api/cash";
 import { type CustomerRow, listCustomers } from "../api/customers";
 import {
   type CartProduct,
@@ -97,6 +98,7 @@ export default function PosPage() {
 
   const codeInputRef = useRef<HTMLInputElement | null>(null);
   const [quickCode, setQuickCode] = useState("");
+  const [cashSession, setCashSession] = useState<CashSessionRow | null>(null);
 
   // ── Boot ────────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -141,6 +143,17 @@ export default function PosPage() {
       setDocumentType(customer.default_document_type);
     }
   }, [customer]);
+
+  // Detect the warehouse's open cash session.
+  useEffect(() => {
+    if (!warehouseId) {
+      setCashSession(null);
+      return;
+    }
+    currentSession(warehouseId)
+      .then(setCashSession)
+      .catch(() => setCashSession(null));
+  }, [warehouseId, receipt]);
 
   const totals = useMemo(() => computeTotals(cart, globalDiscount), [cart, globalDiscount]);
 
@@ -255,15 +268,31 @@ export default function PosPage() {
 
   return (
     <Stack spacing={2}>
-      <Box>
-        <Typography variant="h5" fontWeight={700}>
-          Punto de venta
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Carrito con busqueda por SKU/codigo de barras, calculo de IVA e impuestos
-          adicionales, y emision local de boletas / facturas / notas de venta.
-        </Typography>
-      </Box>
+      <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+        <Box>
+          <Typography variant="h5" fontWeight={700}>
+            Punto de venta
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Carrito con busqueda por SKU/codigo de barras, calculo de IVA e impuestos
+            adicionales, y emision local de boletas / facturas / notas de venta.
+          </Typography>
+        </Box>
+        {warehouseId && (
+          cashSession ? (
+            <Chip
+              color="success"
+              label={`Caja abierta · ${cashSession.summary.documents_count} docs · ${formatCLP(cashSession.summary.sales_total_clp)}`}
+            />
+          ) : (
+            <Chip
+              color="warning"
+              variant="outlined"
+              label="Sin caja abierta · abrila en la pestana Caja"
+            />
+          )
+        )}
+      </Stack>
 
       <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
         <Autocomplete

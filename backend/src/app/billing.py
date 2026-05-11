@@ -362,14 +362,25 @@ def emit_document(session: Session, payload: CheckoutInput) -> Document:
             raise HTTPException(status_code=404, detail="Cliente no encontrado.")
     validate_customer_for_type(customer, payload.document_type)
 
-    if payload.cash_session_id:
-        from app.models import CashSession, CashSessionStatus
+    from app.models import CashSession, CashSessionStatus
 
+    resolved_session_id: Optional[str] = None
+    if payload.cash_session_id:
         cs = session.get(CashSession, payload.cash_session_id)
         if cs is None:
             raise HTTPException(status_code=404, detail="Sesion de caja no encontrada.")
         if cs.status != CashSessionStatus.open:
             raise HTTPException(status_code=400, detail="La sesion de caja no esta abierta.")
+        resolved_session_id = cs.id
+    else:
+        # Auto-link to the warehouse's open session if any.
+        auto = session.exec(
+            select(CashSession)
+            .where(CashSession.warehouse_id == warehouse.id)
+            .where(CashSession.status == CashSessionStatus.open)
+        ).first()
+        if auto is not None:
+            resolved_session_id = auto.id
 
     lines, totals = compute_totals(session, payload)
 
@@ -383,7 +394,7 @@ def emit_document(session: Session, payload: CheckoutInput) -> Document:
         iva_clp=totals.iva_clp,
         total_clp=totals.total_clp,
         notes=(payload.notes or None),
-        cash_session_id=payload.cash_session_id,
+        cash_session_id=resolved_session_id,
     )
     session.add(document)
     session.flush()

@@ -381,7 +381,23 @@ class StockMovement(SQLModel, table=True):
 
 
 class CashSession(SQLModel, table=True):
+    """Cash drawer / till session, scoped to a warehouse.
+
+    A session is opened with a starting amount, accumulates sales while open,
+    and is closed with an actual counted amount. The expected amount is
+    computed from sales emitted during the session; the difference is
+    expected - closing (positive = sobrante, negative = faltante).
+
+    At most one open session per warehouse at a time (enforced in router).
+    """
+
     id: str = Field(default_factory=new_id, primary_key=True)
+    warehouse_id: Optional[str] = Field(
+        default=None, foreign_key="warehouse.id", index=True
+    )
+    opened_by: Optional[str] = Field(
+        default=None, description="Free-text cashier name; no auth yet."
+    )
     opened_at: datetime = Field(default_factory=utcnow)
     closed_at: Optional[datetime] = None
     opening_amount_clp: Decimal = Field(default=Decimal("0"))

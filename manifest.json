@@ -1,8 +1,22 @@
 {
   "name": "vent-os",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "description": "Local-first POS, sales, and inventory app for Chilean SMBs (Pymes). FastAPI backend, Vite + React frontend, SQLite storage.",
   "changelog": [
+    {
+      "version": "0.14.0",
+      "summary": "Cuentas por cobrar: factura/nota_venta a credito + abonos + vista de cobranza.",
+      "changes": [
+        "Document.due_date nuevo campo opcional (migracion aditiva).",
+        "POS: factura y nota_venta pueden emitirse sin pago completo. El cuadre estricto sigue exigido para boleta; factura/nota_venta solo validan que pagos no excedan el total.",
+        "Input 'Vence el' en POS cuando el tipo es factura o nota_venta.",
+        "Endpoint POST /api/documents/{id}/payments: registra abonos sobre documentos con saldo pendiente. Valida que no exceda el saldo. Auto-asocia a la caja abierta de la bodega del documento.",
+        "DocumentOut incluye paid_total_clp, balance_due_clp, payment_status (paid/partial/pending/overdue) y is_overdue.",
+        "Nuevo router /api/receivables: lista de documentos con saldo, filtros (estado, cliente, bodega, fecha), ordenado por vencimiento con vencidos primero. /api/receivables/stats devuelve total adeudado, vencido, por vencer en 7/30 dias.",
+        "Nueva tab 'Cobranza' con cards de KPIs + tabla. Detail drawer de doc muestra saldo, vencimiento y boton 'Registrar pago' que abre AddPaymentDialog.",
+        "Dashboard /summary agrega bloque 'Cuentas por cobrar' con total adeudado y vencido."
+      ]
+    },
     {
       "version": "0.13.0",
       "summary": "Tab Inicio con dashboard de KPIs y alertas.",

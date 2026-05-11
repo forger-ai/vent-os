@@ -13,6 +13,7 @@ import {
 import { get } from "./api/client";
 import ProductosPage from "./pages/ProductosPage";
 import ClientesPage from "./pages/ClientesPage";
+import CobranzaPage from "./pages/CobranzaPage";
 import HomePage from "./pages/HomePage";
 import PosPage from "./pages/PosPage";
 import DocumentosPage from "./pages/DocumentosPage";
@@ -28,6 +29,7 @@ const TABS = [
   { id: "productos", label: "Productos" },
   { id: "clientes", label: "Clientes" },
   { id: "documentos", label: "Documentos" },
+  { id: "cobranza", label: "Cobranza" },
   { id: "inventario", label: "Inventario" },
   { id: "caja", label: "Caja" },
   { id: "config", label: "Configuracion" },
@@ -85,6 +87,7 @@ export default function App() {
         {tab === "productos" && <ProductosPage />}
         {tab === "clientes" && <ClientesPage />}
         {tab === "documentos" && <DocumentosPage />}
+        {tab === "cobranza" && <CobranzaPage />}
         {tab === "inventario" && <InventarioPage />}
         {tab === "caja" && <CajaPage />}
         {tab === "config" && <ConfiguracionPage />}

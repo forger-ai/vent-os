@@ -55,6 +55,13 @@ export interface LowStockBrief {
   stock_min: number;
 }
 
+export interface ReceivablesBrief {
+  open_count: number;
+  total_due_clp: number;
+  overdue_count: number;
+  overdue_total_clp: number;
+}
+
 export interface DashboardSummary {
   today: PeriodKpis;
   this_week: PeriodKpis;
@@ -62,6 +69,7 @@ export interface DashboardSummary {
   quotes_active: number;
   quotes_expired: number;
   guias_unbilled: number;
+  receivables: ReceivablesBrief;
   low_stock: LowStockBrief[];
   expiring_batches: ExpiringBatchBrief[];
   expired_batches_count: number;

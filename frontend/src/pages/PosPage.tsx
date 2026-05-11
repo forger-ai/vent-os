@@ -101,6 +101,7 @@ export default function PosPage() {
   const [shippingAddress, setShippingAddress] = useState<string>("");
   const [shippingNotes, setShippingNotes] = useState<string>("");
   const [carrierName, setCarrierName] = useState<string>("");
+  const [dueDate, setDueDate] = useState<string>("");
 
   const [cart, setCart] = useState<CartLine[]>([]);
   const [searchText, setSearchText] = useState("");
@@ -258,6 +259,8 @@ export default function PosPage() {
   const isQuote = documentType === "cotizacion";
   const isGuia = documentType === "guia_despacho";
   const hidesPayments = isQuote || isGuia;
+  const allowsCredit =
+    documentType === "factura" || documentType === "nota_venta";
 
   const handleCheckout = async () => {
     setPosError(null);
@@ -273,11 +276,22 @@ export default function PosPage() {
       setPosError("Factura requiere un cliente con RUT.");
       return;
     }
-    if (!hidesPayments && Math.abs(paymentDelta) > 1) {
-      setPosError(
-        `Los pagos no cuadran con el total. Faltan ${formatCLP(Math.abs(paymentDelta))}.`,
-      );
-      return;
+    // Boleta: cuadre exacto. Factura/nota_venta: balance pendiente permitido,
+    // solo no exceder. Guia/cotizacion: no captura pagos en este flujo.
+    if (!hidesPayments) {
+      if (allowsCredit) {
+        if (paymentDelta < -1) {
+          setPosError(
+            `Los pagos exceden el total. Sobran ${formatCLP(-paymentDelta)}.`,
+          );
+          return;
+        }
+      } else if (Math.abs(paymentDelta) > 1) {
+        setPosError(
+          `Los pagos no cuadran con el total. Faltan ${formatCLP(Math.abs(paymentDelta))}.`,
+        );
+        return;
+      }
     }
     setEmitting(true);
     try {
@@ -326,6 +340,7 @@ export default function PosPage() {
           shipping_address: isGuia ? shippingAddress.trim() || null : null,
           shipping_notes: isGuia ? shippingNotes.trim() || null : null,
           carrier_name: isGuia ? carrierName.trim() || null : null,
+          due_date: allowsCredit ? dueDate || null : null,
         });
         setToast(isGuia ? `Guia #${result.folio} emitida` : `Emitido folio ${result.folio}`);
       }
@@ -337,6 +352,7 @@ export default function PosPage() {
       setShippingAddress("");
       setShippingNotes("");
       setCarrierName("");
+      setDueDate("");
       setPayments([]);
     } catch (err) {
       setPosError(err instanceof ApiError ? err.message : "No se pudo emitir el documento.");
@@ -451,6 +467,18 @@ export default function PosPage() {
             onChange={(e) => setValidUntil(e.target.value)}
             slotProps={{ inputLabel: { shrink: true } }}
             sx={{ minWidth: 160 }}
+          />
+        )}
+        {allowsCredit && (
+          <TextField
+            type="date"
+            label="Vence el (opcional)"
+            size="small"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            slotProps={{ inputLabel: { shrink: true } }}
+            sx={{ minWidth: 180 }}
+            helperText="Si dejas saldo pendiente"
           />
         )}
       </Stack>
@@ -837,15 +865,21 @@ export default function PosPage() {
                   </Typography>
                   {Math.abs(paymentDelta) <= 1 ? (
                     <Chip size="small" color="success" label="Cuadra" />
+                  ) : paymentDelta > 0 ? (
+                    <Chip
+                      size="small"
+                      color={allowsCredit ? "info" : "warning"}
+                      label={
+                        allowsCredit
+                          ? `Saldo pendiente: ${formatCLP(paymentDelta)}`
+                          : `Faltan ${formatCLP(paymentDelta)}`
+                      }
+                    />
                   ) : (
                     <Chip
                       size="small"
-                      color={paymentDelta > 0 ? "warning" : "error"}
-                      label={
-                        paymentDelta > 0
-                          ? `Faltan ${formatCLP(paymentDelta)}`
-                          : `Sobra ${formatCLP(-paymentDelta)}`
-                      }
+                      color="error"
+                      label={`Sobra ${formatCLP(-paymentDelta)}`}
                     />
                   )}
                 </Stack>

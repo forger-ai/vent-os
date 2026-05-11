@@ -20,6 +20,7 @@ import {
   Typography,
 } from "@mui/material";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+import PaidIcon from "@mui/icons-material/Paid";
 import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import RefreshIcon from "@mui/icons-material/Refresh";
@@ -226,6 +227,38 @@ export default function HomePage() {
               </Card>
             </Grid>
           </Grid>
+
+          {/* Receivables */}
+          {summary.receivables.open_count > 0 && (
+            <Card>
+              <CardContent>
+                <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems="center">
+                  <Stack direction="row" spacing={1} alignItems="center" sx={{ flexGrow: 1 }}>
+                    <PaidIcon
+                      color={summary.receivables.overdue_count > 0 ? "error" : "primary"}
+                    />
+                    <Box>
+                      <Typography variant="overline" color="text.secondary">
+                        Cuentas por cobrar
+                      </Typography>
+                      <Typography variant="h5" fontWeight={700}>
+                        {formatCLP(summary.receivables.total_due_clp)}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {summary.receivables.open_count} documento(s) con saldo
+                      </Typography>
+                    </Box>
+                  </Stack>
+                  {summary.receivables.overdue_count > 0 && (
+                    <Chip
+                      color="error"
+                      label={`${summary.receivables.overdue_count} vencido(s) · ${formatCLP(summary.receivables.overdue_total_clp)}`}
+                    />
+                  )}
+                </Stack>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Cash sessions open */}
           {summary.cash_sessions_open.length > 0 && (

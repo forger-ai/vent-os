@@ -110,6 +110,13 @@ class LowStockBrief(BaseModel):
     stock_min: float
 
 
+class ReceivablesBrief(BaseModel):
+    open_count: int
+    total_due_clp: float
+    overdue_count: int
+    overdue_total_clp: float
+
+
 class DashboardSummary(BaseModel):
     today: PeriodKpis
     this_week: PeriodKpis
@@ -117,6 +124,7 @@ class DashboardSummary(BaseModel):
     quotes_active: int
     quotes_expired: int
     guias_unbilled: int
+    receivables: ReceivablesBrief
     low_stock: list[LowStockBrief]
     expiring_batches: list[ExpiringBatchBrief]
     expired_batches_count: int
@@ -423,6 +431,17 @@ def dashboard_summary(
         payments_breakdown = _payments_breakdown(session, month_start, today, warehouse_id)
         cash_sessions = _cash_sessions_open(session, warehouse_id)
 
+        # Receivables brief — reuse the receivables stats helper.
+        from app.routers.receivables import receivables_stats as _recv_stats
+
+        recv = _recv_stats(warehouse_id=warehouse_id, customer_id=None)
+        receivables = ReceivablesBrief(
+            open_count=recv.open_count,
+            total_due_clp=recv.total_due_clp,
+            overdue_count=recv.overdue_count,
+            overdue_total_clp=recv.overdue_total_clp,
+        )
+
         return DashboardSummary(
             today=today_kpi,
             this_week=week_kpi,
@@ -430,6 +449,7 @@ def dashboard_summary(
             quotes_active=quotes_active,
             quotes_expired=quotes_expired,
             guias_unbilled=int(guias_unbilled),
+            receivables=receivables,
             low_stock=low_stock,
             expiring_batches=expiring,
             expired_batches_count=expired_count,

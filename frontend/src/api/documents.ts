@@ -83,3 +83,10 @@ export interface ConvertDocumentInput {
 
 export const convertDocument = (documentId: string, body: ConvertDocumentInput) =>
   post<DocumentOut>(`/api/documents/${documentId}/convert`, body);
+
+export interface AddPaymentInput {
+  payments: { payment_method_id: string; amount_clp: number; reference?: string | null }[];
+}
+
+export const addDocumentPayment = (documentId: string, body: AddPaymentInput) =>
+  post<DocumentOut>(`/api/documents/${documentId}/payments`, body);

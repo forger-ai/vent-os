@@ -18,6 +18,7 @@ from app.routers.price_lists import router as price_lists_router
 from app.routers.products import router as products_router
 from app.routers.products_csv import router as products_csv_router
 from app.routers.quotes import router as quotes_router
+from app.routers.receivables import router as receivables_router
 from app.routers.stock import router as stock_router
 from app.routers.tax_codes import router as tax_codes_router
 from app.routers.variants import router as variants_router
@@ -25,7 +26,7 @@ from app.routers.warehouses import router as warehouses_router
 
 app = FastAPI(
     title="Vent OS API",
-    version="0.13.0",
+    version="0.14.0",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json",
@@ -64,6 +65,7 @@ app.include_router(quotes_router, prefix="/api/quotes", tags=["quotes"])
 app.include_router(pos_router, prefix="/api/pos", tags=["pos"])
 app.include_router(cash_router, prefix="/api/cash", tags=["cash"])
 app.include_router(dashboard_router, prefix="/api/dashboard", tags=["dashboard"])
+app.include_router(receivables_router, prefix="/api/receivables", tags=["receivables"])
 
 
 @app.on_event("startup")

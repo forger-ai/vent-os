@@ -236,6 +236,7 @@ class CheckoutInputModel(BaseModel):
     shipping_address: Optional[str] = None
     shipping_notes: Optional[str] = None
     carrier_name: Optional[str] = None
+    due_date: Optional[str] = None  # ISO date YYYY-MM-DD
 
 
 class DocumentItemOut(BaseModel):
@@ -284,6 +285,11 @@ class DocumentOut(BaseModel):
     shipping_address: Optional[str]
     shipping_notes: Optional[str]
     carrier_name: Optional[str]
+    due_date: Optional[str]
+    paid_total_clp: float
+    balance_due_clp: float
+    payment_status: str  # paid / partial / pending / overdue / na
+    is_overdue: bool
     subtotal_clp: float
     iva_clp: float
     total_clp: float
@@ -342,6 +348,35 @@ def _document_to_out(session: Session, document: Document) -> DocumentOut:
         and document.valid_until < _date.today()
     )
 
+    # Receivables: paid_total / balance_due / status
+    from app.billing import document_balance
+
+    paid_dec, _, balance_dec = document_balance(session, document)
+    paid_total = float(paid_dec)
+    balance_due = float(balance_dec)
+    today = _date.today()
+    is_overdue = bool(
+        balance_due > 0
+        and document.status == _DS.issued
+        and document.due_date is not None
+        and document.due_date < today
+    )
+    if document.document_type not in (
+        _DT.boleta,
+        _DT.factura,
+        _DT.nota_venta,
+        _DT.guia_despacho,
+    ):
+        payment_status = "na"
+    elif document.status == _DS.cancelled:
+        payment_status = "na"
+    elif balance_due <= 0 and float(document.total_clp) > 0:
+        payment_status = "paid"
+    elif paid_total > 0:
+        payment_status = "overdue" if is_overdue else "partial"
+    else:
+        payment_status = "overdue" if is_overdue else "pending"
+
     payment_rows = session.exec(
         select(DocumentPayment, PaymentMethod)
         .join(PaymentMethod, PaymentMethod.id == DocumentPayment.payment_method_id)
@@ -386,6 +421,11 @@ def _document_to_out(session: Session, document: Document) -> DocumentOut:
         shipping_address=document.shipping_address,
         shipping_notes=document.shipping_notes,
         carrier_name=document.carrier_name,
+        due_date=document.due_date.isoformat() if document.due_date else None,
+        paid_total_clp=paid_total,
+        balance_due_clp=balance_due,
+        payment_status=payment_status,
+        is_overdue=is_overdue,
         subtotal_clp=float(document.subtotal_clp),
         iva_clp=float(document.iva_clp),
         total_clp=float(document.total_clp),
@@ -454,6 +494,11 @@ def checkout(payload: CheckoutInputModel) -> DocumentOut:
             shipping_address=payload.shipping_address,
             shipping_notes=payload.shipping_notes,
             carrier_name=payload.carrier_name,
+            due_date=(
+                __import__("datetime").date.fromisoformat(payload.due_date)
+                if payload.due_date
+                else None
+            ),
         )
         document = emit_document(session, ci)
         session.commit()

@@ -317,6 +317,10 @@ class Document(SQLModel, table=True):
     )
     shipping_notes: Optional[str] = None
     carrier_name: Optional[str] = Field(default=None, max_length=120)
+    due_date: Optional[date] = Field(
+        default=None,
+        description="Fecha de vencimiento del pago (factura/nota_venta a credito).",
+    )
     status: DocumentStatus = Field(default=DocumentStatus.draft)
     subtotal_clp: Decimal = Field(default=Decimal("0"))
     iva_clp: Decimal = Field(default=Decimal("0"))

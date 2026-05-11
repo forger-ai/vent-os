@@ -10,16 +10,18 @@ from datetime import date
 from typing import Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlmodel import Session, func, select
 
 from decimal import Decimal
 
 from app.billing import (
+    AddPaymentInput,
     CheckoutPayment,
     ConvertQuoteInput,
     CreditNoteInput,
     CreditNoteItem,
+    add_payment,
     cancel_document,
     convert_to_sales_document,
     emit_credit_note,
@@ -259,6 +261,41 @@ class ConvertInputModel(BaseModel):
     cash_session_id: Optional[str] = None
     payments: list[dict] = []
     notes: Optional[str] = None
+
+
+class AddPaymentItemInput(BaseModel):
+    payment_method_id: str
+    amount_clp: float = Field(gt=0)
+    reference: Optional[str] = None
+
+
+class AddPaymentInputModel(BaseModel):
+    payments: list[AddPaymentItemInput]
+
+
+@router.post("/{document_id}/payments", response_model=DocumentOut, status_code=201)
+def add_document_payment(document_id: str, payload: AddPaymentInputModel) -> DocumentOut:
+    """Registra un abono sobre un documento con saldo pendiente."""
+    from decimal import Decimal as _Decimal
+
+    with Session(engine) as session:
+        d = session.get(Document, document_id)
+        if d is None:
+            raise HTTPException(status_code=404, detail="Documento no encontrado")
+        api = AddPaymentInput(
+            payments=[
+                CheckoutPayment(
+                    payment_method_id=p.payment_method_id,
+                    amount_clp=_Decimal(str(p.amount_clp)),
+                    reference=p.reference,
+                )
+                for p in payload.payments
+            ],
+        )
+        add_payment(session, d, api)
+        session.commit()
+        session.refresh(d)
+        return _document_to_out(session, d)
 
 
 @router.post("/{document_id}/convert", response_model=DocumentOut, status_code=201)

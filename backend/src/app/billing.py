@@ -83,6 +83,7 @@ class CheckoutInput:
     shipping_address: Optional[str] = None
     shipping_notes: Optional[str] = None
     carrier_name: Optional[str] = None
+    due_date: Optional[date] = None
     # Internal flag set during guia_despacho -> invoice conversion: stock
     # already left when the guia was emitted, so we don't decrement again.
     skip_stock: bool = False
@@ -415,6 +416,7 @@ def emit_document(session: Session, payload: CheckoutInput) -> Document:
         shipping_address=(payload.shipping_address or None),
         shipping_notes=(payload.shipping_notes or None),
         carrier_name=(payload.carrier_name or None),
+        due_date=payload.due_date,
     )
     session.add(document)
     session.flush()
@@ -436,12 +438,20 @@ def emit_document(session: Session, payload: CheckoutInput) -> Document:
         if not payload.skip_stock:
             fulfill_line(session, line, warehouse, document)
 
-    # Persist payments. Guia de despacho is the one document type that may be
-    # emitted without payments — the bill comes later when it's converted to
-    # boleta/factura. Other types default to a single cash payment for the
-    # total when no payments are provided.
+    # Persist payments.
+    #
+    # Boleta: must be paid in full at emission. If no payments are provided,
+    #         default to a single cash payment for the total.
+    # Factura / nota_venta: may be emitted with partial payment or none, and
+    #         the remaining balance becomes a receivable. Set due_date when
+    #         leaving an open balance.
+    # Guia de despacho: emitted without payments — bill comes later.
     payments = list(payload.payments) if payload.payments else []
-    if not payments and payload.document_type != DocumentType.guia_despacho:
+
+    if (
+        not payments
+        and payload.document_type == DocumentType.boleta
+    ):
         cash_pm = session.exec(
             select(PaymentMethod)
             .where(PaymentMethod.is_cash.is_(True))
@@ -482,14 +492,137 @@ def emit_document(session: Session, payload: CheckoutInput) -> Document:
             )
         )
 
-    # Allow at most $1 rounding tolerance. Guia de despacho without payments
-    # is intentionally unbilled — skip the check.
+    # Boleta cuadre exacto. Factura / nota_venta / guia: solo verificar que no
+    # se exceda el total (puede quedar saldo pendiente).
     if payments:
-        if abs(total_paid - totals.total_clp) > Decimal("1"):
+        if payload.document_type == DocumentType.boleta:
+            if abs(total_paid - totals.total_clp) > Decimal("1"):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"En boleta los pagos deben cuadrar con el total. Pagado {total_paid}, total {totals.total_clp}.",
+                )
+        else:
+            if total_paid - totals.total_clp > Decimal("1"):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Los pagos ({total_paid}) exceden el total del documento ({totals.total_clp}).",
+                )
+
+    return document
+
+
+# ── Receivables: add payment to existing doc ─────────────────────────────────
+
+
+@dataclass
+class AddPaymentInput:
+    payments: list[CheckoutPayment]
+    occurred_at: Optional[datetime] = None
+
+
+def document_balance(session: Session, document: Document) -> tuple[Decimal, Decimal, Decimal]:
+    """Returns (paid_total, returned_total, balance_due).
+
+    balance_due = total_clp - returned_total - paid_total (clamped to 0).
+    """
+    if document.document_type not in (
+        DocumentType.boleta,
+        DocumentType.factura,
+        DocumentType.nota_venta,
+        DocumentType.guia_despacho,
+    ):
+        return DEC_ZERO, DEC_ZERO, DEC_ZERO
+
+    paid = session.exec(
+        select(DocumentPayment).where(DocumentPayment.document_id == document.id)
+    ).all()
+    paid_total = sum((p.amount_clp for p in paid), DEC_ZERO)
+
+    ncs = session.exec(
+        select(Document)
+        .where(Document.parent_document_id == document.id)
+        .where(Document.document_type == DocumentType.nota_credito)
+        .where(Document.status == DocumentStatus.issued)
+    ).all()
+    returned_total = sum((nc.total_clp for nc in ncs), DEC_ZERO)
+
+    balance = document.total_clp - returned_total - paid_total
+    if balance < DEC_ZERO:
+        balance = DEC_ZERO
+    return paid_total, returned_total, balance
+
+
+def add_payment(session: Session, document: Document, payload: AddPaymentInput) -> Document:
+    """Register additional payment(s) against a document. Used for collecting
+    receivables on already-emitted documents (factura/nota_venta with balance
+    due, or paying off a guia_despacho that wasn't billed yet)."""
+    if document.status != DocumentStatus.issued:
+        raise HTTPException(
+            status_code=400,
+            detail=f"El documento no esta emitido (estado: {document.status.value}).",
+        )
+    if document.document_type not in (
+        DocumentType.boleta,
+        DocumentType.factura,
+        DocumentType.nota_venta,
+        DocumentType.guia_despacho,
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Solo se pueden registrar pagos sobre boletas, facturas, notas de venta o guias.",
+        )
+    if not payload.payments:
+        raise HTTPException(status_code=400, detail="No se incluyeron pagos.")
+
+    _, _, balance = document_balance(session, document)
+    if balance <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail="El documento ya esta totalmente pagado o no tiene saldo pendiente.",
+        )
+
+    # Auto-link payments to the open cash session of the document's warehouse.
+    from app.models import CashSession, CashSessionStatus
+
+    resolved_session_id: Optional[str] = document.cash_session_id
+    if resolved_session_id is None and document.warehouse_id:
+        auto = session.exec(
+            select(CashSession)
+            .where(CashSession.warehouse_id == document.warehouse_id)
+            .where(CashSession.status == CashSessionStatus.open)
+        ).first()
+        if auto is not None:
+            resolved_session_id = auto.id
+            document.cash_session_id = auto.id
+            session.add(document)
+
+    total_new = DEC_ZERO
+    for p in payload.payments:
+        pm = session.get(PaymentMethod, p.payment_method_id)
+        if pm is None or not pm.is_active:
             raise HTTPException(
                 status_code=400,
-                detail=f"La suma de pagos ({total_paid}) no cuadra con el total del documento ({totals.total_clp}).",
+                detail=f"Metodo de pago invalido: {p.payment_method_id}",
             )
+        amount = Decimal(p.amount_clp)
+        if amount <= 0:
+            raise HTTPException(status_code=400, detail="El monto del pago debe ser mayor a 0.")
+        total_new += amount
+        session.add(
+            DocumentPayment(
+                document_id=document.id,
+                payment_method_id=pm.id,
+                amount_clp=amount,
+                reference=(p.reference or None),
+                occurred_at=payload.occurred_at or datetime.now(timezone.utc),
+            )
+        )
+
+    if total_new - balance > Decimal("1"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"El abono ({total_new}) excede el saldo pendiente ({balance}).",
+        )
 
     return document
 

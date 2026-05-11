@@ -20,6 +20,7 @@ import AssignmentReturnIcon from "@mui/icons-material/AssignmentReturn";
 import BlockIcon from "@mui/icons-material/Block";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
+import PaidIcon from "@mui/icons-material/Paid";
 import { ApiError } from "../../api/client";
 import {
   type DocumentOut,
@@ -30,6 +31,7 @@ import {
 } from "../../api/documents";
 import { cancelQuote } from "../../api/quotes";
 import { formatCLP, formatQty } from "../../util/format";
+import AddPaymentDialog from "./AddPaymentDialog";
 import ConvertDocumentDialog from "./ConvertDocumentDialog";
 import CreditNoteDialog from "./CreditNoteDialog";
 
@@ -74,6 +76,7 @@ export default function DocumentDetailDrawer({
   const [childNCs, setChildNCs] = useState<DocumentRow[]>([]);
   const [creditOpen, setCreditOpen] = useState(false);
   const [convertOpen, setConvertOpen] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!documentId) return;
@@ -232,6 +235,23 @@ export default function DocumentDetailDrawer({
                 <Typography variant="h6" fontWeight={700}>
                   Total: {formatCLP(doc.total_clp)}
                 </Typography>
+                {doc.paid_total_clp > 0 && (
+                  <Typography variant="body2" color="success.main">
+                    Pagado: {formatCLP(doc.paid_total_clp)}
+                  </Typography>
+                )}
+                {doc.balance_due_clp > 0 && (
+                  <Typography
+                    variant="body2"
+                    color={doc.is_overdue ? "error.main" : "warning.main"}
+                    fontWeight={500}
+                  >
+                    Saldo pendiente: {formatCLP(doc.balance_due_clp)}
+                    {doc.due_date && (
+                      <> · vence {doc.due_date}{doc.is_overdue && " (vencido)"}</>
+                    )}
+                  </Typography>
+                )}
                 {doc.returned_total_clp > 0 && (
                   <>
                     <Typography variant="body2" color="warning.main">
@@ -413,6 +433,20 @@ export default function DocumentDetailDrawer({
                       )}
                     </>
                   )}
+                {doc.balance_due_clp > 0 &&
+                  doc.document_type !== "cotizacion" &&
+                  doc.document_type !== "nota_credito" && (
+                    <Button
+                      variant="contained"
+                      color="success"
+                      fullWidth
+                      startIcon={<PaidIcon />}
+                      onClick={() => setPaymentOpen(true)}
+                      disabled={cancelling}
+                    >
+                      Registrar pago ({formatCLP(doc.balance_due_clp)})
+                    </Button>
+                  )}
                 {doc.document_type !== "cotizacion" &&
                   doc.document_type !== "guia_despacho" &&
                   doc.document_type !== "nota_credito" && (
@@ -472,6 +506,19 @@ export default function DocumentDetailDrawer({
           onConverted={() => {
             setConvertOpen(false);
             load();
+            onChanged();
+          }}
+        />
+      )}
+
+      {doc && (
+        <AddPaymentDialog
+          open={paymentOpen}
+          document={doc}
+          onClose={() => setPaymentOpen(false)}
+          onSaved={(updated) => {
+            setPaymentOpen(false);
+            setDoc(updated);
             onChanged();
           }}
         />

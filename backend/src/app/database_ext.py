@@ -231,6 +231,9 @@ def run_pre_create_migrations() -> MigrationContext:
     _add_column_if_missing("document", "shipping_notes", "VARCHAR")
     _add_column_if_missing("document", "carrier_name", "VARCHAR")
 
+    # v0.14: cuentas por cobrar — fecha de vencimiento del pago
+    _add_column_if_missing("document", "due_date", "DATE")
+
     return context
 
 

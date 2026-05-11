@@ -58,6 +58,7 @@ export interface CheckoutInput {
   shipping_address?: string | null;
   shipping_notes?: string | null;
   carrier_name?: string | null;
+  due_date?: string | null;
 }
 
 export interface DocumentItemOut {
@@ -106,6 +107,11 @@ export interface DocumentOut {
   shipping_address: string | null;
   shipping_notes: string | null;
   carrier_name: string | null;
+  due_date: string | null;
+  paid_total_clp: number;
+  balance_due_clp: number;
+  payment_status: "paid" | "partial" | "pending" | "overdue" | "na";
+  is_overdue: boolean;
   subtotal_clp: number;
   iva_clp: number;
   total_clp: number;

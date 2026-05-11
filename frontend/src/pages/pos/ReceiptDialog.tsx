@@ -107,6 +107,25 @@ export default function ReceiptDialog({ open, document: doc, onClose }: ReceiptD
                 Total: {formatCLP(doc.total_clp)}
               </Typography>
             </Stack>
+            {doc.payments.length > 0 && (
+              <>
+                <Divider />
+                <Stack spacing={0.5}>
+                  <Typography variant="body2" fontWeight={600}>
+                    Forma de pago
+                  </Typography>
+                  {doc.payments.map((p) => (
+                    <Stack key={p.id} direction="row" justifyContent="space-between">
+                      <Typography variant="body2">
+                        {p.name}
+                        {p.reference ? ` · ${p.reference}` : ""}
+                      </Typography>
+                      <Typography variant="body2">{formatCLP(p.amount_clp)}</Typography>
+                    </Stack>
+                  ))}
+                </Stack>
+              </>
+            )}
             {doc.notes && (
               <>
                 <Divider />

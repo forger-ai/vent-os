@@ -37,6 +37,10 @@ import {
   posCheckout,
   searchPosProducts,
 } from "../api/pos";
+import {
+  type PaymentMethodRow,
+  listPaymentMethods,
+} from "../api/payment_methods";
 import { type PriceListRow, listPriceLists } from "../api/price_lists";
 import { type WarehouseRow, listWarehouses } from "../api/warehouses";
 import { formatCLP } from "../util/format";
@@ -46,6 +50,12 @@ interface CartLine {
   product: CartProduct;
   quantity: number;
   line_discount_clp: number;
+}
+
+interface PaymentLine {
+  payment_method_id: string;
+  amount_clp: number;
+  reference: string;
 }
 
 const IVA_RATE = 0.19;
@@ -99,6 +109,8 @@ export default function PosPage() {
   const codeInputRef = useRef<HTMLInputElement | null>(null);
   const [quickCode, setQuickCode] = useState("");
   const [cashSession, setCashSession] = useState<CashSessionRow | null>(null);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodRow[]>([]);
+  const [payments, setPayments] = useState<PaymentLine[]>([]);
 
   // ── Boot ────────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -119,6 +131,9 @@ export default function PosPage() {
     listCustomers({ limit: 500 })
       .then((p) => setCustomers(p.items))
       .catch(() => {});
+    listPaymentMethods(false)
+      .then(setPaymentMethods)
+      .catch(() => setPaymentMethods([]));
   }, []);
 
   // ── Search effect (debounced) ──────────────────────────────────────────────
@@ -156,6 +171,33 @@ export default function PosPage() {
   }, [warehouseId, receipt]);
 
   const totals = useMemo(() => computeTotals(cart, globalDiscount), [cart, globalDiscount]);
+
+  const cashMethod = useMemo(
+    () => paymentMethods.find((m) => m.is_cash) ?? paymentMethods[0] ?? null,
+    [paymentMethods],
+  );
+
+  // Auto-suggest single cash payment for the full total when the cart changes
+  // and the user hasn't customized payments.
+  useEffect(() => {
+    if (!cashMethod) return;
+    if (payments.length === 0 && totals.total > 0) {
+      setPayments([
+        { payment_method_id: cashMethod.id, amount_clp: totals.total, reference: "" },
+      ]);
+      return;
+    }
+    if (payments.length === 1 && cart.length > 0) {
+      // Single-line payment: keep it synced with the cart total
+      setPayments([{ ...payments[0], amount_clp: totals.total }]);
+    }
+  }, [cart, totals.total, cashMethod]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const paymentsTotal = useMemo(
+    () => payments.reduce((acc, p) => acc + (Number(p.amount_clp) || 0), 0),
+    [payments],
+  );
+  const paymentDelta = totals.total - paymentsTotal;
 
   // ── Cart operations ─────────────────────────────────────────────────────────
   const addToCart = useCallback(
@@ -222,6 +264,12 @@ export default function PosPage() {
       setPosError("Factura requiere un cliente con RUT.");
       return;
     }
+    if (Math.abs(paymentDelta) > 1) {
+      setPosError(
+        `Los pagos no cuadran con el total. Faltan ${formatCLP(Math.abs(paymentDelta))}.`,
+      );
+      return;
+    }
     setEmitting(true);
     try {
       const result = await posCheckout({
@@ -236,11 +284,19 @@ export default function PosPage() {
           quantity: l.quantity,
           line_discount_clp: l.line_discount_clp || 0,
         })),
+        payments: payments
+          .filter((p) => p.payment_method_id && p.amount_clp > 0)
+          .map((p) => ({
+            payment_method_id: p.payment_method_id,
+            amount_clp: p.amount_clp,
+            reference: p.reference.trim() || null,
+          })),
       });
       setReceipt(result);
       setCart([]);
       setGlobalDiscount(0);
       setNotes("");
+      setPayments([]);
       setToast(`Emitido folio ${result.folio}`);
     } catch (err) {
       setPosError(err instanceof ApiError ? err.message : "No se pudo emitir el documento.");
@@ -594,6 +650,127 @@ export default function PosPage() {
               <Typography variant="h5" fontWeight={700}>
                 Total: {formatCLP(totals.total)}
               </Typography>
+            </Stack>
+
+            <Divider sx={{ my: 2 }} />
+
+            <Stack spacing={1}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between">
+                <Typography variant="subtitle2" fontWeight={600}>
+                  Pagos
+                </Typography>
+                <Button
+                  size="small"
+                  startIcon={<AddIcon />}
+                  onClick={() =>
+                    setPayments((prev) => [
+                      ...prev,
+                      {
+                        payment_method_id: paymentMethods[0]?.id ?? "",
+                        amount_clp: Math.max(0, paymentDelta),
+                        reference: "",
+                      },
+                    ])
+                  }
+                  disabled={paymentMethods.length === 0}
+                >
+                  Agregar pago
+                </Button>
+              </Stack>
+              {payments.length === 0 && (
+                <Typography variant="caption" color="text.secondary">
+                  Sin pagos. Por defecto se emite todo como Efectivo.
+                </Typography>
+              )}
+              {payments.map((p, idx) => (
+                <Stack
+                  direction={{ xs: "column", sm: "row" }}
+                  spacing={1}
+                  key={idx}
+                  alignItems="center"
+                >
+                  <TextField
+                    select
+                    size="small"
+                    label="Metodo"
+                    value={p.payment_method_id}
+                    onChange={(e) =>
+                      setPayments((prev) =>
+                        prev.map((q, i) =>
+                          i === idx ? { ...q, payment_method_id: e.target.value } : q,
+                        ),
+                      )
+                    }
+                    sx={{ minWidth: 180 }}
+                  >
+                    {paymentMethods.map((m) => (
+                      <MenuItem key={m.id} value={m.id}>
+                        {m.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                  <TextField
+                    label="Monto"
+                    size="small"
+                    type="number"
+                    value={p.amount_clp}
+                    onChange={(e) =>
+                      setPayments((prev) =>
+                        prev.map((q, i) =>
+                          i === idx
+                            ? { ...q, amount_clp: Math.max(0, Number(e.target.value)) }
+                            : q,
+                        ),
+                      )
+                    }
+                    sx={{ minWidth: 120 }}
+                    slotProps={{ htmlInput: { min: 0, step: 1 } }}
+                  />
+                  <TextField
+                    label="Referencia (opcional)"
+                    size="small"
+                    value={p.reference}
+                    onChange={(e) =>
+                      setPayments((prev) =>
+                        prev.map((q, i) =>
+                          i === idx ? { ...q, reference: e.target.value } : q,
+                        ),
+                      )
+                    }
+                    sx={{ flexGrow: 1, minWidth: 140 }}
+                    placeholder="Voucher, últimos 4..."
+                  />
+                  <IconButton
+                    size="small"
+                    color="error"
+                    onClick={() =>
+                      setPayments((prev) => prev.filter((_, i) => i !== idx))
+                    }
+                  >
+                    <DeleteOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Stack>
+              ))}
+              {payments.length > 0 && (
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Typography variant="caption" color="text.secondary">
+                    Pagado: {formatCLP(paymentsTotal)} de {formatCLP(totals.total)}
+                  </Typography>
+                  {Math.abs(paymentDelta) <= 1 ? (
+                    <Chip size="small" color="success" label="Cuadra" />
+                  ) : (
+                    <Chip
+                      size="small"
+                      color={paymentDelta > 0 ? "warning" : "error"}
+                      label={
+                        paymentDelta > 0
+                          ? `Faltan ${formatCLP(paymentDelta)}`
+                          : `Sobra ${formatCLP(-paymentDelta)}`
+                      }
+                    />
+                  )}
+                </Stack>
+              )}
             </Stack>
 
             {posError && <Alert severity="error" sx={{ mt: 1 }}>{posError}</Alert>}

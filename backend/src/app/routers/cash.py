@@ -25,7 +25,9 @@ from app.models import (
     CashSession,
     CashSessionStatus,
     Document,
+    DocumentPayment,
     DocumentStatus,
+    PaymentMethod,
     Warehouse,
 )
 
@@ -35,10 +37,21 @@ router = APIRouter()
 # ── Shapes ────────────────────────────────────────────────────────────────────
 
 
+class PaymentBreakdownItem(BaseModel):
+    payment_method_id: str
+    code: str
+    name: str
+    is_cash: bool
+    amount_clp: float
+
+
 class SessionSummary(BaseModel):
     documents_count: int
     sales_total_clp: float
+    cash_total_clp: float
+    non_cash_total_clp: float
     cancelled_count: int
+    payments_by_method: list[PaymentBreakdownItem]
 
 
 class CashSessionRow(BaseModel):
@@ -89,22 +102,67 @@ def _normalize_optional_str(value: Optional[str]) -> Optional[str]:
 
 def _session_summary(session: Session, cash_session_id: str) -> SessionSummary:
     docs = session.exec(
-        select(Document)
-        .where(Document.cash_session_id == cash_session_id)
+        select(Document).where(Document.cash_session_id == cash_session_id)
     ).all()
     count = 0
     total = Decimal("0")
     cancelled = 0
+    issued_ids: list[str] = []
     for d in docs:
         if d.status == DocumentStatus.issued:
             count += 1
             total += d.total_clp
+            issued_ids.append(d.id)
         elif d.status == DocumentStatus.cancelled:
             cancelled += 1
+
+    cash_total = Decimal("0")
+    non_cash_total = Decimal("0")
+    breakdown: dict[str, dict] = {}
+    if issued_ids:
+        payments = session.exec(
+            select(DocumentPayment, PaymentMethod)
+            .join(PaymentMethod, PaymentMethod.id == DocumentPayment.payment_method_id)
+            .where(DocumentPayment.document_id.in_(issued_ids))
+        ).all()
+        for p, pm in payments:
+            if pm.is_cash:
+                cash_total += p.amount_clp
+            else:
+                non_cash_total += p.amount_clp
+            entry = breakdown.setdefault(
+                pm.id,
+                {
+                    "payment_method_id": pm.id,
+                    "code": pm.code,
+                    "name": pm.name,
+                    "is_cash": pm.is_cash,
+                    "amount": Decimal("0"),
+                },
+            )
+            entry["amount"] += p.amount_clp
+
+    items = sorted(
+        (
+            PaymentBreakdownItem(
+                payment_method_id=v["payment_method_id"],
+                code=v["code"],
+                name=v["name"],
+                is_cash=v["is_cash"],
+                amount_clp=float(v["amount"]),
+            )
+            for v in breakdown.values()
+        ),
+        key=lambda b: -b.amount_clp,
+    )
+
     return SessionSummary(
         documents_count=count,
         sales_total_clp=float(total),
+        cash_total_clp=float(cash_total),
+        non_cash_total_clp=float(non_cash_total),
         cancelled_count=cancelled,
+        payments_by_method=list(items),
     )
 
 
@@ -255,7 +313,9 @@ def close_session(session_id: str, payload: CloseSessionInput) -> CashSessionRow
             raise HTTPException(status_code=400, detail="La sesion ya esta cerrada.")
 
         summary = _session_summary(session, session_id)
-        expected = cs.opening_amount_clp + Decimal(str(summary.sales_total_clp))
+        # Expected uses ONLY cash payments (since v0.9): non-cash payments do
+        # not affect the till. Plus opening float.
+        expected = cs.opening_amount_clp + Decimal(str(summary.cash_total_clp))
         closing = Decimal(str(payload.closing_amount_clp))
         difference = closing - expected
 

@@ -204,15 +204,34 @@ export default function CajaPage() {
                 </Grid>
                 <Grid item xs={6} md={3}>
                   <Typography variant="caption" color="text.secondary">
-                    Esperado en caja
+                    Esperado en caja (solo efectivo)
                   </Typography>
                   <Typography variant="h5" fontWeight={700}>
                     {formatCLP(
-                      openSession.opening_amount_clp + openSession.summary.sales_total_clp,
+                      openSession.opening_amount_clp + openSession.summary.cash_total_clp,
                     )}
                   </Typography>
                 </Grid>
               </Grid>
+
+              {openSession.summary.payments_by_method.length > 0 && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    Desglose por metodo de pago
+                  </Typography>
+                  <Stack direction="row" spacing={1} flexWrap="wrap" gap={0.5} mt={0.5}>
+                    {openSession.summary.payments_by_method.map((b) => (
+                      <Chip
+                        key={b.payment_method_id}
+                        size="small"
+                        color={b.is_cash ? "success" : "default"}
+                        variant={b.is_cash ? "filled" : "outlined"}
+                        label={`${b.code}: ${formatCLP(b.amount_clp)}`}
+                      />
+                    ))}
+                  </Stack>
+                </Box>
+              )}
 
               {openSession.summary.cancelled_count > 0 && (
                 <Alert severity="info" variant="outlined" sx={{ mt: 2 }}>

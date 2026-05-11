@@ -33,6 +33,12 @@ export interface CheckoutItemInput {
   line_discount_clp?: number;
 }
 
+export interface CheckoutPaymentInput {
+  payment_method_id: string;
+  amount_clp: number;
+  reference?: string | null;
+}
+
 export interface CheckoutInput {
   document_type: DocumentType;
   warehouse_id: string;
@@ -42,6 +48,7 @@ export interface CheckoutInput {
   global_discount_clp?: number;
   notes?: string | null;
   items: CheckoutItemInput[];
+  payments?: CheckoutPaymentInput[];
 }
 
 export interface DocumentItemOut {
@@ -54,6 +61,16 @@ export interface DocumentItemOut {
   iva_affected: boolean;
   discount_clp: number;
   line_total_clp: number;
+}
+
+export interface DocumentPaymentOut {
+  id: string;
+  payment_method_id: string;
+  code: string;
+  name: string;
+  is_cash: boolean;
+  amount_clp: number;
+  reference: string | null;
 }
 
 export interface DocumentOut {
@@ -72,6 +89,7 @@ export interface DocumentOut {
   total_clp: number;
   notes: string | null;
   items: DocumentItemOut[];
+  payments: DocumentPaymentOut[];
 }
 
 export const searchPosProducts = (

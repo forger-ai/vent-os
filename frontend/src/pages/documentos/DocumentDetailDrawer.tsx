@@ -211,6 +211,41 @@ export default function DocumentDetailDrawer({
                 </Typography>
               </Stack>
 
+              {doc.payments.length > 0 && (
+                <>
+                  <Divider />
+                  <Stack spacing={0.5}>
+                    <Typography variant="caption" color="text.secondary">
+                      Forma de pago
+                    </Typography>
+                    {doc.payments.map((p) => (
+                      <Stack
+                        key={p.id}
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="center"
+                      >
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Chip
+                            size="small"
+                            label={p.code}
+                            color={p.is_cash ? "success" : "default"}
+                            variant="outlined"
+                          />
+                          <Typography variant="body2">
+                            {p.name}
+                            {p.reference ? ` · ${p.reference}` : ""}
+                          </Typography>
+                        </Stack>
+                        <Typography variant="body2" fontWeight={500}>
+                          {formatCLP(p.amount_clp)}
+                        </Typography>
+                      </Stack>
+                    ))}
+                  </Stack>
+                </>
+              )}
+
               {doc.notes && (
                 <Box>
                   <Typography variant="caption" color="text.secondary">

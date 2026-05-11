@@ -25,8 +25,10 @@ from app.models import (
     Customer,
     Document,
     DocumentItem,
+    DocumentPayment,
     DocumentStatus,
     DocumentType,
+    PaymentMethod,
     PriceList,
     PriceListEntry,
     Product,
@@ -60,6 +62,13 @@ class CheckoutItem:
 
 
 @dataclass
+class CheckoutPayment:
+    payment_method_id: str
+    amount_clp: Decimal
+    reference: Optional[str]
+
+
+@dataclass
 class CheckoutInput:
     document_type: DocumentType
     warehouse_id: str
@@ -69,6 +78,7 @@ class CheckoutInput:
     global_discount_clp: Decimal
     notes: Optional[str]
     items: list[CheckoutItem]
+    payments: list[CheckoutPayment]
 
 
 @dataclass
@@ -414,6 +424,57 @@ def emit_document(session: Session, payload: CheckoutInput) -> Document:
             )
         )
         fulfill_line(session, line, warehouse, document)
+
+    # Persist payments. If none provided, default to the cash method for the
+    # entire total (backward-compatible).
+    payments = list(payload.payments) if payload.payments else []
+    if not payments:
+        cash_pm = session.exec(
+            select(PaymentMethod)
+            .where(PaymentMethod.is_cash.is_(True))
+            .where(PaymentMethod.is_active.is_(True))
+            .order_by(PaymentMethod.sort_order.asc())
+        ).first()
+        if cash_pm is None:
+            raise HTTPException(
+                status_code=400,
+                detail="No hay metodos de pago en efectivo configurados.",
+            )
+        payments = [
+            CheckoutPayment(
+                payment_method_id=cash_pm.id,
+                amount_clp=totals.total_clp,
+                reference=None,
+            )
+        ]
+
+    total_paid = DEC_ZERO
+    for p in payments:
+        pm = session.get(PaymentMethod, p.payment_method_id)
+        if pm is None or not pm.is_active:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Metodo de pago invalido: {p.payment_method_id}",
+            )
+        amount = Decimal(p.amount_clp)
+        if amount <= 0:
+            raise HTTPException(status_code=400, detail="El monto del pago debe ser mayor a 0.")
+        total_paid += amount
+        session.add(
+            DocumentPayment(
+                document_id=document.id,
+                payment_method_id=pm.id,
+                amount_clp=amount,
+                reference=(p.reference or None),
+            )
+        )
+
+    # Allow at most $1 rounding tolerance.
+    if abs(total_paid - totals.total_clp) > Decimal("1"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"La suma de pagos ({total_paid}) no cuadra con el total del documento ({totals.total_clp}).",
+        )
 
     return document
 

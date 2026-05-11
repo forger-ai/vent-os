@@ -325,7 +325,43 @@ def _ensure_default_price_list() -> str:
     return pl_id
 
 
+def _ensure_default_payment_methods() -> None:
+    """Seed the standard payment methods (only if table is empty)."""
+    from uuid import uuid4
+
+    with engine.connect() as conn:
+        existing = conn.execute(text("SELECT id FROM paymentmethod LIMIT 1")).first()
+    if existing:
+        return
+
+    defaults = [
+        ("EFECTIVO", "Efectivo", True, 10),
+        ("DEBITO", "Tarjeta de debito", False, 20),
+        ("CREDITO", "Tarjeta de credito", False, 30),
+        ("TRANSFERENCIA", "Transferencia bancaria", False, 40),
+        ("OTRO", "Otro medio", False, 90),
+    ]
+    with engine.begin() as conn:
+        for code, name, is_cash, sort_order in defaults:
+            conn.execute(
+                text(
+                    "INSERT INTO paymentmethod (id, code, name, is_cash, is_active, "
+                    "sort_order, created_at, updated_at) VALUES (:id, :code, :name, "
+                    ":is_cash, 1, :sort_order, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                ),
+                {
+                    "id": str(uuid4()),
+                    "code": code,
+                    "name": name,
+                    "is_cash": 1 if is_cash else 0,
+                    "sort_order": sort_order,
+                },
+            )
+    logger.info("vent-os migration: seeded %d default payment methods", len(defaults))
+
+
 def run_post_create_migrations(context: MigrationContext) -> None:
     default_wh = _ensure_default_warehouse()
     _backfill_variants_from_legacy(context.legacy_products, default_wh)
     _ensure_default_price_list()
+    _ensure_default_payment_methods()

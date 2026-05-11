@@ -24,6 +24,7 @@ from sqlmodel import Session, func, or_, select
 from app.billing import (
     CheckoutInput,
     CheckoutItem,
+    CheckoutPayment,
     emit_document,
     resolve_unit_price,
 )
@@ -216,6 +217,12 @@ class CheckoutItemInput(BaseModel):
     line_discount_clp: float = Field(default=0, ge=0)
 
 
+class CheckoutPaymentInput(BaseModel):
+    payment_method_id: str
+    amount_clp: float = Field(gt=0)
+    reference: Optional[str] = None
+
+
 class CheckoutInputModel(BaseModel):
     document_type: DocumentType
     warehouse_id: str
@@ -225,6 +232,7 @@ class CheckoutInputModel(BaseModel):
     global_discount_clp: float = Field(default=0, ge=0)
     notes: Optional[str] = None
     items: list[CheckoutItemInput]
+    payments: list[CheckoutPaymentInput] = Field(default_factory=list)
 
 
 class DocumentItemOut(BaseModel):
@@ -237,6 +245,16 @@ class DocumentItemOut(BaseModel):
     iva_affected: bool
     discount_clp: float
     line_total_clp: float
+
+
+class DocumentPaymentOut(BaseModel):
+    id: str
+    payment_method_id: str
+    code: str
+    name: str
+    is_cash: bool
+    amount_clp: float
+    reference: Optional[str]
 
 
 class DocumentOut(BaseModel):
@@ -255,13 +273,20 @@ class DocumentOut(BaseModel):
     total_clp: float
     notes: Optional[str]
     items: list[DocumentItemOut]
+    payments: list[DocumentPaymentOut]
 
 
 def _document_to_out(session: Session, document: Document) -> DocumentOut:
-    from app.models import Customer, DocumentItem
+    from app.models import Customer, DocumentItem, DocumentPayment, PaymentMethod
 
     items = session.exec(
         select(DocumentItem).where(DocumentItem.document_id == document.id)
+    ).all()
+
+    payment_rows = session.exec(
+        select(DocumentPayment, PaymentMethod)
+        .join(PaymentMethod, PaymentMethod.id == DocumentPayment.payment_method_id)
+        .where(DocumentPayment.document_id == document.id)
     ).all()
 
     customer_name = None
@@ -307,6 +332,18 @@ def _document_to_out(session: Session, document: Document) -> DocumentOut:
             )
             for i in items
         ],
+        payments=[
+            DocumentPaymentOut(
+                id=p.id,
+                payment_method_id=pm.id,
+                code=pm.code,
+                name=pm.name,
+                is_cash=pm.is_cash,
+                amount_clp=float(p.amount_clp),
+                reference=p.reference,
+            )
+            for p, pm in payment_rows
+        ],
     )
 
 
@@ -333,6 +370,14 @@ def checkout(payload: CheckoutInputModel) -> DocumentOut:
                     line_discount_clp=Decimal(str(it.line_discount_clp)),
                 )
                 for it in payload.items
+            ],
+            payments=[
+                CheckoutPayment(
+                    payment_method_id=p.payment_method_id,
+                    amount_clp=Decimal(str(p.amount_clp)),
+                    reference=p.reference,
+                )
+                for p in payload.payments
             ],
         )
         document = emit_document(session, ci)

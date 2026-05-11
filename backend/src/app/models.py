@@ -253,6 +253,27 @@ class Customer(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=utcnow)
 
 
+# ── Payment methods ───────────────────────────────────────────────────────────
+
+
+class PaymentMethod(SQLModel, table=True):
+    """Como se paga: efectivo, debito, credito, transferencia, etc.
+
+    `is_cash=True` significa que el monto va al cajon de efectivo y por lo
+    tanto cuenta para el cierre de caja. Los metodos por defecto se siembran
+    en la migracion.
+    """
+
+    id: str = Field(default_factory=new_id, primary_key=True)
+    code: str = Field(index=True, unique=True, description="Identificador corto: EFECTIVO, DEBITO.")
+    name: str
+    is_cash: bool = Field(default=False)
+    is_active: bool = Field(default=True)
+    sort_order: int = Field(default=100)
+    created_at: datetime = Field(default_factory=utcnow)
+    updated_at: datetime = Field(default_factory=utcnow)
+
+
 # ── Sales documents ───────────────────────────────────────────────────────────
 
 
@@ -290,6 +311,23 @@ class DocumentItem(SQLModel, table=True):
     iva_affected: bool = Field(default=True)
     discount_clp: Decimal = Field(default=Decimal("0"))
     line_total_clp: Decimal = Field(default=Decimal("0"))
+
+
+class DocumentPayment(SQLModel, table=True):
+    """Pago aplicado al documento.
+
+    La suma de pagos debe igualar el total del documento (router lo valida).
+    Multiples pagos sobre un documento = pago mixto.
+    """
+
+    id: str = Field(default_factory=new_id, primary_key=True)
+    document_id: str = Field(foreign_key="document.id", index=True)
+    payment_method_id: str = Field(foreign_key="paymentmethod.id", index=True)
+    amount_clp: Decimal = Field(default=Decimal("0"))
+    reference: Optional[str] = Field(
+        default=None, description="Texto libre: voucher, ultimos 4 digitos, etc."
+    )
+    occurred_at: datetime = Field(default_factory=utcnow)
 
 
 # ── Inventory: warehouses, stock levels, batches ─────────────────────────────

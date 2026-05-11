@@ -1,8 +1,20 @@
 {
   "name": "vent-os",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Local-first POS, sales, and inventory app for Chilean SMBs (Pymes). FastAPI backend, Vite + React frontend, SQLite storage.",
   "changelog": [
+    {
+      "version": "0.9.0",
+      "summary": "Metodos de pago en checkout, pagos mixtos y separacion efectivo/electronico en caja.",
+      "changes": [
+        "Tabla PaymentMethod (sembrada con EFECTIVO, DEBITO, CREDITO, TRANSFERENCIA, OTRO) y DocumentPayment para registrar pagos por documento.",
+        "POS checkout acepta array de payments con (metodo, monto, referencia). Soporta pagos mixtos (ej: 5k efectivo + 5k tarjeta). Suma debe cuadrar con el total (tolerancia $1).",
+        "Si no se especifican pagos, default a un pago en efectivo por el total (compatibilidad).",
+        "Sesion de caja: 'esperado' ahora considera SOLO los pagos en efectivo (is_cash=true). Los pagos electronicos no afectan el cajon.",
+        "Desglose de pagos por metodo visible en la tarjeta de sesion abierta y en el detalle del documento.",
+        "Nuevo tab Configuracion > Metodos de pago: CRUD para agregar/editar metodos custom con flag is_cash y orden."
+      ]
+    },
     {
       "version": "0.8.0",
       "summary": "Caja: apertura, cierre con conteo y conciliacion, historial.",

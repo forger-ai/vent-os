@@ -38,13 +38,13 @@ export default function CloseSessionDialog({
     if (!open || !session) return;
     setError(null);
     setNotes("");
-    const expected = session.opening_amount_clp + session.summary.sales_total_clp;
+    const expected = session.opening_amount_clp + session.summary.cash_total_clp;
     setClosingAmount(expected);
   }, [open, session]);
 
   if (!session) return null;
 
-  const expected = session.opening_amount_clp + session.summary.sales_total_clp;
+  const expected = session.opening_amount_clp + session.summary.cash_total_clp;
   const difference = closingAmount - expected;
 
   const handleSubmit = async () => {
@@ -88,17 +88,22 @@ export default function CloseSessionDialog({
             </Grid>
             <Grid item xs={6}>
               <Typography variant="caption" color="text.secondary">
-                Ventas en sesion ({session.summary.documents_count} docs)
+                Efectivo recibido ({session.summary.documents_count} docs)
               </Typography>
-              <Typography variant="h6">{formatCLP(session.summary.sales_total_clp)}</Typography>
+              <Typography variant="h6">{formatCLP(session.summary.cash_total_clp)}</Typography>
             </Grid>
             <Grid item xs={12}>
               <Typography variant="caption" color="text.secondary">
-                Esperado en caja
+                Esperado en caja (solo efectivo)
               </Typography>
               <Typography variant="h5" fontWeight={700}>
                 {formatCLP(expected)}
               </Typography>
+              {session.summary.non_cash_total_clp > 0 && (
+                <Typography variant="caption" color="text.secondary" display="block">
+                  Pagos electronicos: {formatCLP(session.summary.non_cash_total_clp)} (no afectan caja)
+                </Typography>
+              )}
             </Grid>
           </Grid>
 

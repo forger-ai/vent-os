@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { Box, Stack, Tab, Tabs, Typography } from "@mui/material";
 import ImpuestosTab from "./configuracion/ImpuestosTab";
+import MetodosPagoTab from "./configuracion/MetodosPagoTab";
 import PreciosTab from "./configuracion/PreciosTab";
 
-type TabKey = "impuestos" | "precios";
+type TabKey = "impuestos" | "precios" | "metodos_pago";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "impuestos", label: "Impuestos" },
   { key: "precios", label: "Listas de precios" },
+  { key: "metodos_pago", label: "Metodos de pago" },
 ];
 
 export default function ConfiguracionPage() {
@@ -34,6 +36,7 @@ export default function ConfiguracionPage() {
       <Box sx={{ pt: 1 }}>
         {tab === "impuestos" && <ImpuestosTab />}
         {tab === "precios" && <PreciosTab />}
+        {tab === "metodos_pago" && <MetodosPagoTab />}
       </Box>
     </Stack>
   );

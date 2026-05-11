@@ -2,10 +2,21 @@ import { get, post } from "./client";
 
 export type CashSessionStatus = "open" | "closed";
 
+export interface PaymentBreakdownItem {
+  payment_method_id: string;
+  code: string;
+  name: string;
+  is_cash: boolean;
+  amount_clp: number;
+}
+
 export interface SessionSummary {
   documents_count: number;
   sales_total_clp: number;
+  cash_total_clp: number;
+  non_cash_total_clp: number;
   cancelled_count: number;
+  payments_by_method: PaymentBreakdownItem[];
 }
 
 export interface CashSessionRow {

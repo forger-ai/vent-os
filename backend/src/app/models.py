@@ -66,6 +66,7 @@ class DocumentType(str, Enum):
     factura = "factura"
     nota_venta = "nota_venta"
     nota_credito = "nota_credito"
+    cotizacion = "cotizacion"
 
 
 class DocumentStatus(str, Enum):
@@ -296,6 +297,15 @@ class Document(SQLModel, table=True):
         foreign_key="document.id",
         index=True,
         description="Only set on nota_credito: original document it refunds.",
+    )
+    valid_until: Optional[date] = Field(
+        default=None,
+        description="Only for cotizacion: date after which the quote is considered expired.",
+    )
+    converted_to_document_id: Optional[str] = Field(
+        default=None,
+        foreign_key="document.id",
+        description="Only for cotizacion: the sales document it was converted into.",
     )
     status: DocumentStatus = Field(default=DocumentStatus.draft)
     subtotal_clp: Decimal = Field(default=Decimal("0"))

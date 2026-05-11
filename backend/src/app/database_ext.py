@@ -222,6 +222,10 @@ def run_pre_create_migrations() -> MigrationContext:
     # v0.10: nota de credito references its parent document
     _add_column_if_missing("document", "parent_document_id", "VARCHAR")
 
+    # v0.11: quotes (cotizaciones) — valid_until + conversion link
+    _add_column_if_missing("document", "valid_until", "DATE")
+    _add_column_if_missing("document", "converted_to_document_id", "VARCHAR")
+
     return context
 
 

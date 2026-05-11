@@ -1,8 +1,21 @@
 {
   "name": "vent-os",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Local-first POS, sales, and inventory app for Chilean SMBs (Pymes). FastAPI backend, Vite + React frontend, SQLite storage.",
   "changelog": [
+    {
+      "version": "0.11.0",
+      "summary": "Cotizaciones (quotes) que se convierten a venta cuando son aceptadas.",
+      "changes": [
+        "Nuevo tipo de documento `cotizacion` con folio propio y campos valid_until + converted_to_document_id (migracion aditiva).",
+        "Endpoint POST /api/quotes crea cotizacion: usa la misma calculadora de totales pero NO mueve stock, NO requiere pagos y NO asocia caja.",
+        "Endpoint POST /api/quotes/{id}/convert convierte la cotizacion en un documento de venta (boleta/factura/nota_venta) — emite con stock + pagos + caja como un POS normal, y deja la cotizacion vinculada.",
+        "Endpoint POST /api/quotes/{id}/cancel descarta cotizaciones no convertidas.",
+        "POS tab acepta tipo 'Cotizacion': oculta seccion de pagos, muestra input 'valida hasta', el boton cambia a 'Crear cotizacion'.",
+        "Document detail muestra fecha de validez, estado vencido si valid_until ya paso, y link al documento generado tras convertir.",
+        "Documentos tab: chip color info para cotizaciones, filtro por tipo incluye cotizacion. ConvertQuoteDialog desde el detalle con selector de tipo destino + seccion de pagos."
+      ]
+    },
     {
       "version": "0.10.0",
       "summary": "Notas de credito (devoluciones parciales o totales) sobre documentos emitidos.",

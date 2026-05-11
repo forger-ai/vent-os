@@ -42,6 +42,7 @@ import {
   listPaymentMethods,
 } from "../api/payment_methods";
 import { type PriceListRow, listPriceLists } from "../api/price_lists";
+import { createQuote } from "../api/quotes";
 import { type WarehouseRow, listWarehouses } from "../api/warehouses";
 import { formatCLP } from "../util/format";
 import ReceiptDialog from "./pos/ReceiptDialog";
@@ -96,6 +97,7 @@ export default function PosPage() {
   const [documentType, setDocumentType] = useState<DocumentType>("boleta");
   const [globalDiscount, setGlobalDiscount] = useState<number>(0);
   const [notes, setNotes] = useState<string>("");
+  const [validUntil, setValidUntil] = useState<string>("");
 
   const [cart, setCart] = useState<CartLine[]>([]);
   const [searchText, setSearchText] = useState("");
@@ -250,6 +252,8 @@ export default function PosPage() {
   };
 
   // ── Checkout ────────────────────────────────────────────────────────────────
+  const isQuote = documentType === "cotizacion";
+
   const handleCheckout = async () => {
     setPosError(null);
     if (cart.length === 0) {
@@ -260,11 +264,11 @@ export default function PosPage() {
       setPosError("Selecciona una bodega.");
       return;
     }
-    if (documentType === "factura" && (!customer || !customer.rut)) {
+    if (!isQuote && documentType === "factura" && (!customer || !customer.rut)) {
       setPosError("Factura requiere un cliente con RUT.");
       return;
     }
-    if (Math.abs(paymentDelta) > 1) {
+    if (!isQuote && Math.abs(paymentDelta) > 1) {
       setPosError(
         `Los pagos no cuadran con el total. Faltan ${formatCLP(Math.abs(paymentDelta))}.`,
       );
@@ -272,32 +276,51 @@ export default function PosPage() {
     }
     setEmitting(true);
     try {
-      const result = await posCheckout({
-        document_type: documentType,
-        warehouse_id: warehouseId,
-        customer_id: customer?.id ?? null,
-        price_list_id: priceListId || null,
-        global_discount_clp: globalDiscount || 0,
-        notes: notes.trim() || null,
-        items: cart.map((l) => ({
-          variant_id: l.product.variant_id,
-          quantity: l.quantity,
-          line_discount_clp: l.line_discount_clp || 0,
-        })),
-        payments: payments
-          .filter((p) => p.payment_method_id && p.amount_clp > 0)
-          .map((p) => ({
-            payment_method_id: p.payment_method_id,
-            amount_clp: p.amount_clp,
-            reference: p.reference.trim() || null,
+      let result;
+      if (isQuote) {
+        result = await createQuote({
+          warehouse_id: warehouseId,
+          customer_id: customer?.id ?? null,
+          price_list_id: priceListId || null,
+          valid_until: validUntil || null,
+          global_discount_clp: globalDiscount || 0,
+          notes: notes.trim() || null,
+          items: cart.map((l) => ({
+            variant_id: l.product.variant_id,
+            quantity: l.quantity,
+            line_discount_clp: l.line_discount_clp || 0,
           })),
-      });
+        });
+        setToast(`Cotizacion #${result.folio} creada`);
+      } else {
+        result = await posCheckout({
+          document_type: documentType as "boleta" | "factura" | "nota_venta",
+          warehouse_id: warehouseId,
+          customer_id: customer?.id ?? null,
+          price_list_id: priceListId || null,
+          global_discount_clp: globalDiscount || 0,
+          notes: notes.trim() || null,
+          items: cart.map((l) => ({
+            variant_id: l.product.variant_id,
+            quantity: l.quantity,
+            line_discount_clp: l.line_discount_clp || 0,
+          })),
+          payments: payments
+            .filter((p) => p.payment_method_id && p.amount_clp > 0)
+            .map((p) => ({
+              payment_method_id: p.payment_method_id,
+              amount_clp: p.amount_clp,
+              reference: p.reference.trim() || null,
+            })),
+        });
+        setToast(`Emitido folio ${result.folio}`);
+      }
       setReceipt(result);
       setCart([]);
       setGlobalDiscount(0);
       setNotes("");
+      setValidUntil("");
       setPayments([]);
-      setToast(`Emitido folio ${result.folio}`);
     } catch (err) {
       setPosError(err instanceof ApiError ? err.message : "No se pudo emitir el documento.");
     } finally {
@@ -394,12 +417,24 @@ export default function PosPage() {
           size="small"
           value={documentType}
           onChange={(e) => setDocumentType(e.target.value as DocumentType)}
-          sx={{ minWidth: 140 }}
+          sx={{ minWidth: 160 }}
         >
           <MenuItem value="boleta">Boleta</MenuItem>
           <MenuItem value="factura">Factura</MenuItem>
           <MenuItem value="nota_venta">Nota de venta</MenuItem>
+          <MenuItem value="cotizacion">Cotizacion</MenuItem>
         </TextField>
+        {isQuote && (
+          <TextField
+            type="date"
+            label="Valida hasta"
+            size="small"
+            value={validUntil}
+            onChange={(e) => setValidUntil(e.target.value)}
+            slotProps={{ inputLabel: { shrink: true } }}
+            sx={{ minWidth: 160 }}
+          />
+        )}
       </Stack>
 
       <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ alignItems: "stretch" }}>
@@ -652,9 +687,9 @@ export default function PosPage() {
               </Typography>
             </Stack>
 
-            <Divider sx={{ my: 2 }} />
+            {!isQuote && <Divider sx={{ my: 2 }} />}
 
-            <Stack spacing={1}>
+            {!isQuote && <Stack spacing={1}>
               <Stack direction="row" alignItems="center" justifyContent="space-between">
                 <Typography variant="subtitle2" fontWeight={600}>
                   Pagos
@@ -771,7 +806,7 @@ export default function PosPage() {
                   )}
                 </Stack>
               )}
-            </Stack>
+            </Stack>}
 
             {posError && <Alert severity="error" sx={{ mt: 1 }}>{posError}</Alert>}
 
@@ -783,9 +818,14 @@ export default function PosPage() {
               disabled={cart.length === 0 || emitting}
               onClick={handleCheckout}
               sx={{ mt: 2 }}
+              color={isQuote ? "info" : "primary"}
             >
               {emitting
-                ? "Emitiendo..."
+                ? isQuote
+                  ? "Creando..."
+                  : "Emitiendo..."
+                : isQuote
+                ? "Crear cotizacion"
                 : `Emitir ${
                     documentType === "factura"
                       ? "factura"

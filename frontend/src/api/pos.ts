@@ -1,6 +1,11 @@
 import { get, post } from "./client";
 
-export type DocumentType = "boleta" | "factura" | "nota_venta" | "nota_credito";
+export type DocumentType =
+  | "boleta"
+  | "factura"
+  | "nota_venta"
+  | "nota_credito"
+  | "cotizacion";
 
 export interface TaxCodeBrief {
   id: string;
@@ -89,6 +94,11 @@ export interface DocumentOut {
   parent_document_type: DocumentType | null;
   returned_total_clp: number;
   effective_total_clp: number;
+  valid_until: string | null;
+  is_expired: boolean;
+  converted_to_document_id: string | null;
+  converted_to_folio: number | null;
+  converted_to_type: DocumentType | null;
   subtotal_clp: number;
   iva_clp: number;
   total_clp: number;

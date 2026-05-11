@@ -18,6 +18,7 @@ import {
 } from "@mui/material";
 import AssignmentReturnIcon from "@mui/icons-material/AssignmentReturn";
 import BlockIcon from "@mui/icons-material/Block";
+import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import { ApiError } from "../../api/client";
 import {
@@ -27,7 +28,9 @@ import {
   getDocument,
   listCreditNotesFor,
 } from "../../api/documents";
+import { cancelQuote } from "../../api/quotes";
 import { formatCLP, formatQty } from "../../util/format";
+import ConvertQuoteDialog from "./ConvertQuoteDialog";
 import CreditNoteDialog from "./CreditNoteDialog";
 
 interface DocumentDetailDrawerProps {
@@ -68,6 +71,7 @@ export default function DocumentDetailDrawer({
   const [cancelling, setCancelling] = useState(false);
   const [childNCs, setChildNCs] = useState<DocumentRow[]>([]);
   const [creditOpen, setCreditOpen] = useState(false);
+  const [convertOpen, setConvertOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!documentId) return;
@@ -241,6 +245,16 @@ export default function DocumentDetailDrawer({
                     NC sobre {TYPE_LABEL[doc.parent_document_type ?? ""] ?? doc.parent_document_type} #{doc.parent_folio}
                   </Typography>
                 )}
+                {doc.document_type === "cotizacion" && doc.valid_until && (
+                  <Typography variant="caption" color={doc.is_expired ? "error.main" : "text.secondary"}>
+                    Valida hasta {doc.valid_until}{doc.is_expired && " (vencida)"}
+                  </Typography>
+                )}
+                {doc.converted_to_folio && (
+                  <Typography variant="caption" color="success.main">
+                    Convertida en {TYPE_LABEL[doc.converted_to_type ?? ""] ?? doc.converted_to_type} #{doc.converted_to_folio}
+                  </Typography>
+                )}
               </Stack>
 
               {childNCs.length > 0 && (
@@ -326,32 +340,76 @@ export default function DocumentDetailDrawer({
             <Divider />
             <Box sx={{ p: 2 }}>
               <Stack spacing={1}>
-                {doc.document_type !== "nota_credito" && (
+                {doc.document_type === "cotizacion" && !doc.converted_to_document_id && (
+                  <>
+                    <Button
+                      variant="contained"
+                      color="success"
+                      fullWidth
+                      startIcon={<CheckIcon />}
+                      onClick={() => setConvertOpen(true)}
+                    >
+                      Convertir en venta
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      fullWidth
+                      startIcon={<BlockIcon />}
+                      onClick={async () => {
+                        if (!confirm("Descartar esta cotizacion?")) return;
+                        setCancelling(true);
+                        try {
+                          const updated = await cancelQuote(doc.id);
+                          setDoc(updated);
+                          onChanged();
+                        } catch (err) {
+                          setError(
+                            err instanceof ApiError
+                              ? err.message
+                              : "No se pudo descartar.",
+                          );
+                        } finally {
+                          setCancelling(false);
+                        }
+                      }}
+                      disabled={cancelling}
+                    >
+                      Descartar cotizacion
+                    </Button>
+                  </>
+                )}
+                {doc.document_type !== "cotizacion" &&
+                  doc.document_type !== "nota_credito" && (
+                    <Button
+                      variant="contained"
+                      color="warning"
+                      fullWidth
+                      startIcon={<AssignmentReturnIcon />}
+                      onClick={() => setCreditOpen(true)}
+                      disabled={cancelling}
+                    >
+                      Emitir nota de credito (devolucion)
+                    </Button>
+                  )}
+                {doc.document_type !== "cotizacion" && (
                   <Button
-                    variant="contained"
-                    color="warning"
+                    variant="outlined"
+                    color="error"
                     fullWidth
-                    startIcon={<AssignmentReturnIcon />}
-                    onClick={() => setCreditOpen(true)}
+                    startIcon={<BlockIcon />}
                     disabled={cancelling}
+                    onClick={handleCancel}
                   >
-                    Emitir nota de credito (devolucion)
+                    {cancelling ? "Anulando..." : "Anular documento (rapido)"}
                   </Button>
                 )}
-                <Button
-                  variant="outlined"
-                  color="error"
-                  fullWidth
-                  startIcon={<BlockIcon />}
-                  disabled={cancelling}
-                  onClick={handleCancel}
-                >
-                  {cancelling ? "Anulando..." : "Anular documento (rapido)"}
-                </Button>
-                <Typography variant="caption" color="text.secondary" textAlign="center">
-                  Anular: error operativo, revierte todo. Nota de credito:
-                  devolucion parcial/total, deja el documento original como historico.
-                </Typography>
+                {doc.document_type !== "cotizacion" && (
+                  <Typography variant="caption" color="text.secondary" textAlign="center">
+                    Anular: error operativo, revierte todo. Nota de credito:
+                    devolucion parcial/total, deja el documento original como historico.
+                  </Typography>
+                )}
               </Stack>
             </Box>
           </>
@@ -365,6 +423,19 @@ export default function DocumentDetailDrawer({
           onClose={() => setCreditOpen(false)}
           onCreated={() => {
             setCreditOpen(false);
+            load();
+            onChanged();
+          }}
+        />
+      )}
+
+      {doc && (
+        <ConvertQuoteDialog
+          open={convertOpen}
+          quote={doc}
+          onClose={() => setConvertOpen(false)}
+          onConverted={() => {
+            setConvertOpen(false);
             load();
             onChanged();
           }}

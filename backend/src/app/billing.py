@@ -14,7 +14,7 @@ document-creation endpoint. The IVA rate is fixed at 19% (Chile) for v0.x.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Optional
 
@@ -481,6 +481,158 @@ def emit_document(session: Session, payload: CheckoutInput) -> Document:
 
 
 # ── Cancel ────────────────────────────────────────────────────────────────────
+
+
+# ── Cotizacion (quote) ───────────────────────────────────────────────────────
+
+
+@dataclass
+class QuoteInput:
+    warehouse_id: str
+    customer_id: Optional[str]
+    price_list_id: Optional[str]
+    valid_until: Optional[date]
+    global_discount_clp: Decimal
+    notes: Optional[str]
+    items: list[CheckoutItem]
+
+
+def emit_quote(session: Session, payload: QuoteInput) -> Document:
+    """Crea una cotizacion. NO mueve stock, NO requiere pagos, NO asocia caja.
+
+    Reusa la calculadora de totales: para los items pasados resuelve precios
+    (override / lista / base) y computa neto + IVA + impuestos adicionales
+    como en una venta normal.
+    """
+    warehouse = session.get(Warehouse, payload.warehouse_id)
+    if warehouse is None or not warehouse.is_active:
+        raise HTTPException(status_code=404, detail="Bodega no encontrada o inactiva.")
+
+    customer: Optional[Customer] = None
+    if payload.customer_id:
+        customer = session.get(Customer, payload.customer_id)
+        if customer is None:
+            raise HTTPException(status_code=404, detail="Cliente no encontrado.")
+
+    # Reuse compute_totals via a synthetic CheckoutInput.
+    ci = CheckoutInput(
+        document_type=DocumentType.cotizacion,
+        warehouse_id=warehouse.id,
+        customer_id=customer.id if customer else None,
+        price_list_id=payload.price_list_id,
+        cash_session_id=None,
+        global_discount_clp=payload.global_discount_clp,
+        notes=payload.notes,
+        items=payload.items,
+        payments=[],
+    )
+    lines, totals = compute_totals(session, ci)
+
+    quote = Document(
+        document_type=DocumentType.cotizacion,
+        folio=next_folio(session, DocumentType.cotizacion),
+        customer_id=customer.id if customer else None,
+        warehouse_id=warehouse.id,
+        status=DocumentStatus.issued,
+        subtotal_clp=totals.subtotal_clp,
+        iva_clp=totals.iva_clp,
+        total_clp=totals.total_clp,
+        notes=(payload.notes or None),
+        cash_session_id=None,
+        valid_until=payload.valid_until,
+    )
+    session.add(quote)
+    session.flush()
+
+    for line in lines:
+        session.add(
+            DocumentItem(
+                document_id=quote.id,
+                variant_id=line.variant.id,
+                sku_snapshot=line.variant.sku,
+                name_snapshot=line.product.name,
+                quantity=line.quantity,
+                unit_price_clp=line.unit_price_clp,
+                iva_affected=line.product.iva_affected,
+                discount_clp=line.line_discount_clp,
+                line_total_clp=_round_clp(line.line_gross_clp),
+            )
+        )
+
+    return quote
+
+
+@dataclass
+class ConvertQuoteInput:
+    document_type: DocumentType  # boleta / factura / nota_venta
+    cash_session_id: Optional[str]
+    payments: list[CheckoutPayment]
+    notes: Optional[str]
+
+
+def convert_quote_to_sale(
+    session: Session, quote: Document, payload: ConvertQuoteInput
+) -> Document:
+    """Convierte una cotizacion en un documento de venta. Crea un nuevo
+    documento del tipo elegido, decrementa stock, captura pagos, y vincula
+    la cotizacion original via converted_to_document_id."""
+    if quote.document_type != DocumentType.cotizacion:
+        raise HTTPException(status_code=400, detail="Solo se pueden convertir cotizaciones.")
+    if quote.status != DocumentStatus.issued:
+        raise HTTPException(
+            status_code=400,
+            detail=f"La cotizacion no esta abierta (estado: {quote.status.value}).",
+        )
+    if quote.converted_to_document_id is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="La cotizacion ya fue convertida.",
+        )
+    if payload.document_type not in (
+        DocumentType.boleta,
+        DocumentType.factura,
+        DocumentType.nota_venta,
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="El tipo de destino debe ser boleta, factura o nota_venta.",
+        )
+
+    # Re-emit as a normal sales document using the quote's items.
+    quote_items = session.exec(
+        select(DocumentItem).where(DocumentItem.document_id == quote.id)
+    ).all()
+    if not quote_items:
+        raise HTTPException(status_code=400, detail="La cotizacion no tiene items.")
+
+    checkout = CheckoutInput(
+        document_type=payload.document_type,
+        warehouse_id=quote.warehouse_id or "",
+        customer_id=quote.customer_id,
+        price_list_id=None,
+        cash_session_id=payload.cash_session_id,
+        global_discount_clp=DEC_ZERO,
+        notes=(payload.notes or f"Convertido desde cotizacion #{quote.folio}"),
+        items=[
+            CheckoutItem(
+                variant_id=it.variant_id or "",
+                quantity=it.quantity,
+                # Use the price snapshot from the quote so conversion is faithful.
+                unit_price_override_clp=it.unit_price_clp,
+                line_discount_clp=it.discount_clp,
+            )
+            for it in quote_items
+            if it.variant_id
+        ],
+        payments=payload.payments,
+    )
+    new_doc = emit_document(session, checkout)
+
+    quote.converted_to_document_id = new_doc.id
+    quote.updated_at = datetime.now(timezone.utc)
+    session.add(quote)
+
+    return new_doc
 
 
 # ── Credit note (nota de credito) ────────────────────────────────────────────

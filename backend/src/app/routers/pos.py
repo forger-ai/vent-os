@@ -273,6 +273,11 @@ class DocumentOut(BaseModel):
     parent_document_type: Optional[DocumentType]
     returned_total_clp: float
     effective_total_clp: float
+    valid_until: Optional[str]
+    is_expired: bool
+    converted_to_document_id: Optional[str]
+    converted_to_folio: Optional[int]
+    converted_to_type: Optional[DocumentType]
     subtotal_clp: float
     iva_clp: float
     total_clp: float
@@ -313,6 +318,24 @@ def _document_to_out(session: Session, document: Document) -> DocumentOut:
         ).all()
         returned_total = float(sum((nc.total_clp for nc in ncs), Decimal("0")))
 
+    converted_folio = None
+    converted_type = None
+    if document.converted_to_document_id:
+        target = session.get(Document, document.converted_to_document_id)
+        if target:
+            converted_folio = target.folio
+            converted_type = target.document_type
+
+    from datetime import date as _date
+
+    is_expired = bool(
+        document.document_type == _DT.cotizacion
+        and document.valid_until
+        and document.status == _DS.issued
+        and document.converted_to_document_id is None
+        and document.valid_until < _date.today()
+    )
+
     payment_rows = session.exec(
         select(DocumentPayment, PaymentMethod)
         .join(PaymentMethod, PaymentMethod.id == DocumentPayment.payment_method_id)
@@ -349,6 +372,11 @@ def _document_to_out(session: Session, document: Document) -> DocumentOut:
         parent_document_type=parent_type,
         returned_total_clp=returned_total,
         effective_total_clp=float(document.total_clp) - returned_total,
+        valid_until=document.valid_until.isoformat() if document.valid_until else None,
+        is_expired=is_expired,
+        converted_to_document_id=document.converted_to_document_id,
+        converted_to_folio=converted_folio,
+        converted_to_type=converted_type,
         subtotal_clp=float(document.subtotal_clp),
         iva_clp=float(document.iva_clp),
         total_clp=float(document.total_clp),

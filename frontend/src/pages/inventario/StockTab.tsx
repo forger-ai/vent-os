@@ -116,7 +116,7 @@ export default function StockTab() {
       },
       {
         field: "stock_min",
-        headerName: "Minimo",
+        headerName: "Mínimo",
         width: 100,
         align: "right",
         headerAlign: "right",
@@ -169,7 +169,7 @@ export default function StockTab() {
       <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems="center">
         <TextField
           label="Buscar"
-          placeholder="SKU, nombre o codigo de barras"
+          placeholder="SKU, nombre o código de barras"
           size="small"
           value={query}
           onChange={(e) => setQuery(e.target.value)}

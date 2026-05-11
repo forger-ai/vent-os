@@ -9,7 +9,7 @@ type TabKey = "impuestos" | "precios" | "metodos_pago";
 const TABS: { key: TabKey; label: string }[] = [
   { key: "impuestos", label: "Impuestos" },
   { key: "precios", label: "Listas de precios" },
-  { key: "metodos_pago", label: "Metodos de pago" },
+  { key: "metodos_pago", label: "Métodos de pago" },
 ];
 
 export default function ConfiguracionPage() {
@@ -19,10 +19,10 @@ export default function ConfiguracionPage() {
     <Stack spacing={2}>
       <Box>
         <Typography variant="h5" fontWeight={700}>
-          Configuracion
+          Configuración
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Codigos de impuestos adicionales (ILA, especificos, azucaradas) y listas de
+          Códigos de impuestos adicionales (ILA, específicos, azucaradas) y listas de
           precios alternativas (minorista, mayorista, VIP).
         </Typography>
       </Box>

@@ -262,7 +262,7 @@ export default function ProductDialog({
                   options={categories}
                   value={updateForm.category}
                   onInputChange={(_, value) => setU("category", value)}
-                  renderInput={(params) => <TextField {...params} label="Categoria" fullWidth />}
+                  renderInput={(params) => <TextField {...params} label="Categoría" fullWidth />}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -415,7 +415,7 @@ export default function ProductDialog({
                 options={categories}
                 value={createForm.category}
                 onInputChange={(_, value) => setC("category", value)}
-                renderInput={(params) => <TextField {...params} label="Categoria" fullWidth />}
+                renderInput={(params) => <TextField {...params} label="Categoría" fullWidth />}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -517,7 +517,7 @@ export default function ProductDialog({
             </Grid>
             <Grid item xs={12} sm={4}>
               <TextField
-                label="Codigo de barras"
+                label="Código de barras"
                 fullWidth
                 value={createForm.barcode}
                 onChange={(e) => setC("barcode", e.target.value)}
@@ -525,7 +525,7 @@ export default function ProductDialog({
             </Grid>
             <Grid item xs={12} sm={4}>
               <TextField
-                label="Stock minimo"
+                label="Stock mínimo"
                 type="number"
                 fullWidth
                 value={createForm.stock_min}

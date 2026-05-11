@@ -119,7 +119,7 @@ export default function ClientesPage() {
     () => [
       {
         field: "razon_social",
-        headerName: "Razon social",
+        headerName: "Razón social",
         flex: 1.5,
         minWidth: 240,
         renderCell: (p) => (
@@ -162,7 +162,7 @@ export default function ClientesPage() {
       },
       {
         field: "phone",
-        headerName: "Telefono",
+        headerName: "Teléfono",
         width: 140,
         valueGetter: (_, row) => row.phone ?? "—",
       },
@@ -212,8 +212,8 @@ export default function ClientesPage() {
             Clientes
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Ficha de clientes con RUT, razon social, giro y documento por defecto.
-            Los con default "Factura" requieren RUT.
+            Ficha de clientes con RUT, razón social, giro y documento por defecto.
+            Los marcados como "Factura" requieren RUT.
           </Typography>
         </Box>
         <Stack direction="row" spacing={1}>
@@ -238,7 +238,7 @@ export default function ClientesPage() {
       <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
         <TextField
           label="Buscar"
-          placeholder="Razon social, RUT o email"
+          placeholder="Razón social, RUT o email"
           size="small"
           value={query}
           onChange={(e) => setQuery(e.target.value)}

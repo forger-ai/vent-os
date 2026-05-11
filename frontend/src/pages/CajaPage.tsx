@@ -120,7 +120,7 @@ export default function CajaPage() {
           </Typography>
           <Typography variant="body2" color="text.secondary">
             Apertura y cierre de caja por bodega con monto inicial, conteo final y
-            diferencia. Las ventas emitidas en POS se asocian automaticamente a la
+            diferencia. Las ventas emitidas en POS se asocian automáticamente a la
             caja abierta de la bodega correspondiente.
           </Typography>
         </Box>
@@ -196,7 +196,7 @@ export default function CajaPage() {
                 </Grid>
                 <Grid item xs={6} md={3}>
                   <Typography variant="caption" color="text.secondary">
-                    Ventas en sesion
+                    Ventas en sesión
                   </Typography>
                   <Typography variant="h6">
                     {formatCLP(openSession.summary.sales_total_clp)}
@@ -217,7 +217,7 @@ export default function CajaPage() {
               {openSession.summary.payments_by_method.length > 0 && (
                 <Box sx={{ mt: 2 }}>
                   <Typography variant="caption" color="text.secondary">
-                    Desglose por metodo de pago
+                    Desglose por método de pago
                   </Typography>
                   <Stack direction="row" spacing={1} flexWrap="wrap" gap={0.5} mt={0.5}>
                     {openSession.summary.payments_by_method.map((b) => (
@@ -236,7 +236,7 @@ export default function CajaPage() {
               {openSession.summary.cancelled_count > 0 && (
                 <Alert severity="info" variant="outlined" sx={{ mt: 2 }}>
                   {openSession.summary.cancelled_count} documento(s) anulado(s) en
-                  esta sesion (no cuentan en el esperado).
+                  esta sesión (no cuentan en el esperado).
                 </Alert>
               )}
             </>
@@ -244,7 +244,7 @@ export default function CajaPage() {
             <Stack alignItems="center" spacing={2} sx={{ py: 3 }}>
               <Chip icon={<LockIcon />} label="Sin caja abierta" />
               <Typography variant="body2" color="text.secondary">
-                No hay caja abierta en esta bodega. Abrela antes de empezar a vender
+                No hay caja abierta en esta bodega. Ábrela antes de empezar a vender
                 para que las ventas se asocien.
               </Typography>
               <Button
@@ -286,7 +286,7 @@ export default function CajaPage() {
                   <TableRow>
                     <TableCell colSpan={9} align="center">
                       <Typography variant="caption" color="text.secondary" sx={{ py: 2 }}>
-                        Sin sesiones cerradas todavia.
+                        Sin sesiones cerradas todavía.
                       </Typography>
                     </TableCell>
                   </TableRow>

@@ -73,7 +73,7 @@ export default function WarehouseDialog({ open, initial, onClose, onSaved }: War
   const handleSubmit = async () => {
     setError(null);
     if (!form.code.trim()) {
-      setError("El codigo es obligatorio.");
+      setError("El código es obligatorio.");
       return;
     }
     if (!form.name.trim()) {
@@ -110,7 +110,7 @@ export default function WarehouseDialog({ open, initial, onClose, onSaved }: War
           <Grid container spacing={2}>
             <Grid item xs={12} sm={4}>
               <TextField
-                label="Codigo"
+                label="Código"
                 fullWidth
                 required
                 value={form.code}
@@ -130,7 +130,7 @@ export default function WarehouseDialog({ open, initial, onClose, onSaved }: War
             </Grid>
             <Grid item xs={12}>
               <TextField
-                label="Direccion"
+                label="Dirección"
                 fullWidth
                 value={form.address}
                 onChange={(e) => set("address", e.target.value)}

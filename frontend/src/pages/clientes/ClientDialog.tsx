@@ -182,7 +182,7 @@ export default function ClientDialog({ open, initial, onClose, onSaved }: Client
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
-                label="Telefono"
+                label="Teléfono"
                 fullWidth
                 value={form.phone}
                 onChange={(e) => set("phone", e.target.value)}
@@ -190,7 +190,7 @@ export default function ClientDialog({ open, initial, onClose, onSaved }: Client
             </Grid>
             <Grid item xs={12}>
               <TextField
-                label="Direccion"
+                label="Dirección"
                 fullWidth
                 value={form.address}
                 onChange={(e) => set("address", e.target.value)}

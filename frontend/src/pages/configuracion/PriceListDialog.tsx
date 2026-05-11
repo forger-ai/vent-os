@@ -70,7 +70,7 @@ export default function PriceListDialog({ open, initial, onClose, onSaved }: Pri
   const handleSubmit = async () => {
     setError(null);
     if (!form.code.trim() || !form.name.trim()) {
-      setError("Codigo y nombre son obligatorios.");
+      setError("Código y nombre son obligatorios.");
       return;
     }
     setSaving(true);
@@ -102,7 +102,7 @@ export default function PriceListDialog({ open, initial, onClose, onSaved }: Pri
           <Grid container spacing={2}>
             <Grid item xs={12} sm={4}>
               <TextField
-                label="Codigo"
+                label="Código"
                 fullWidth
                 required
                 value={form.code}

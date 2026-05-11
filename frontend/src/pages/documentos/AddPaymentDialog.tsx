@@ -151,7 +151,7 @@ export default function AddPaymentDialog({
               <TextField
                 select
                 size="small"
-                label="Metodo"
+                label="Método"
                 value={p.payment_method_id}
                 onChange={(e) =>
                   setPayments((prev) =>

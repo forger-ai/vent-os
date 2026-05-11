@@ -251,7 +251,7 @@ export default function TransferDialog({
                       {...p}
                       label="Lote origen"
                       required
-                      helperText="El lote se crea (o suma) en la bodega destino con el mismo numero."
+                      helperText="El lote se crea (o suma) en la bodega destino con el mismo número."
                     />
                   )}
                 />

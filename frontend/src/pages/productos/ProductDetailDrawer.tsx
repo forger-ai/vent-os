@@ -301,7 +301,7 @@ export default function ProductDetailDrawer({
                         <TableRow>
                           <TableCell>Bodega</TableCell>
                           <TableCell align="right">Stock</TableCell>
-                          <TableCell align="right">Minimo</TableCell>
+                          <TableCell align="right">Mínimo</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>

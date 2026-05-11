@@ -101,7 +101,7 @@ export default function CloseSessionDialog({
               </Typography>
               {session.summary.non_cash_total_clp > 0 && (
                 <Typography variant="caption" color="text.secondary" display="block">
-                  Pagos electronicos: {formatCLP(session.summary.non_cash_total_clp)} (no afectan caja)
+                  Pagos electrónicos: {formatCLP(session.summary.non_cash_total_clp)} (no afectan caja)
                 </Typography>
               )}
             </Grid>
@@ -150,7 +150,7 @@ export default function CloseSessionDialog({
 
           {session.summary.cancelled_count > 0 && (
             <Alert severity="info" variant="outlined">
-              Hubo {session.summary.cancelled_count} documento(s) anulado(s) durante esta sesion.
+              Hubo {session.summary.cancelled_count} documento(s) anulado(s) durante esta sesión.
               Su monto no cuenta en el esperado.
             </Alert>
           )}

@@ -77,7 +77,7 @@ export default function PaymentMethodDialog({
   const handleSubmit = async () => {
     setError(null);
     if (!form.code.trim() || !form.name.trim()) {
-      setError("Codigo y nombre son obligatorios.");
+      setError("Código y nombre son obligatorios.");
       return;
     }
     setSaving(true);
@@ -94,7 +94,7 @@ export default function PaymentMethodDialog({
         : await createPaymentMethod(body as PaymentMethodCreateInput);
       onSaved(saved);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "No se pudo guardar el metodo.");
+      setError(err instanceof ApiError ? err.message : "No se pudo guardar el método.");
     } finally {
       setSaving(false);
     }
@@ -102,14 +102,14 @@ export default function PaymentMethodDialog({
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{editing ? "Editar metodo de pago" : "Nuevo metodo de pago"}</DialogTitle>
+      <DialogTitle>{editing ? "Editar método de pago" : "Nuevo método de pago"}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
           {error && <Alert severity="error">{error}</Alert>}
           <Grid container spacing={2}>
             <Grid item xs={12} sm={4}>
               <TextField
-                label="Codigo"
+                label="Código"
                 fullWidth
                 required
                 value={form.code}
@@ -166,7 +166,7 @@ export default function PaymentMethodDialog({
           Cancelar
         </Button>
         <Button variant="contained" onClick={handleSubmit} disabled={saving}>
-          {saving ? "Guardando..." : editing ? "Guardar" : "Crear metodo"}
+          {saving ? "Guardando..." : editing ? "Guardar" : "Crear método"}
         </Button>
       </DialogActions>
     </Dialog>

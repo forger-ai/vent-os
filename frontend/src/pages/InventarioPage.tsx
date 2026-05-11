@@ -13,7 +13,7 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "movimientos", label: "Movimientos" },
   { key: "bodegas", label: "Bodegas" },
   { key: "lotes", label: "Lotes" },
-  { key: "valorizacion", label: "Valorizacion" },
+  { key: "valorizacion", label: "Valorización" },
 ];
 
 export default function InventarioPage() {
@@ -26,7 +26,7 @@ export default function InventarioPage() {
           Inventario
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Stock por variante y bodega, historial de movimientos, gestion de bodegas y
+          Stock por variante y bodega, historial de movimientos, gestión de bodegas y
           lotes con vencimientos.
         </Typography>
       </Box>
